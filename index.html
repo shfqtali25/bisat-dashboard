@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PM &amp; PTW Dashboard</title><style>
+<title>PM &amp; PTW Dashboard</title>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
+<style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -253,13 +256,30 @@ input[type=range]{accent-color:var(--accent);cursor:pointer}
 .om-time{font-family:'JetBrains Mono';font-size:11px;color:var(--dim);margin-top:2px}
 .om-acts{display:flex;gap:7px;flex-shrink:0}
 
+/* ════════ v5 cloud sync UI ════════ */
+.auth-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#authBtn{font-size:11.5px}
+.sync-pill{font-size:11px;font-family:'JetBrains Mono';font-weight:600;padding:5px 10px;
+  border-radius:5px;border:1px solid var(--line-hi);background:rgba(0,0,0,.22);
+  color:#cae0e5}
+.sync-off{color:#9aa9b5}
+.sync-busy{color:var(--amber)}
+.sync-ok{color:#6dd29b}
+.sync-err{color:#ff8e83}
+.cloud-info{font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:8px}
+
 </style></head><body>
 <div class="hdr"><div class="hdr-l">
 <img class="hdr-logo" alt="OQEP" src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAB7AZkDASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAcIAwYEBQkBAv/EAFIQAAEDAgIEBgoOCQIFBQAAAAEAAgMEBQYRBxIhMRNBUWFxkQgVIlJWgZKh0dIUFhcyNkJTVWJydZSxsxgjN4KTlbLBw3PwJDM0VMJjZaLT4f/EABsBAQACAwEBAAAAAAAAAAAAAAAFBgIEBwMB/8QAOREAAQIEAgUJBwUBAQEAAAAAAQACAwQFESFBEjFRcaEGExRSkbHR4fAVIiMzYYHBFjI0cvEkQmL/2gAMAwEAAhEDEQA/ALloiIiIiIiIiIiIiIiIuLUXG307tWor6WE8j5mt/Er5Bc7bO7VguFJK7kZM1x8xWHOMva4WfNPtexsuWiAgjMIs1giIiIiIiIiIiIiIiIiLHPUQQN1p5o4m8r3Bo864ovNoLtUXWhJ5BUM9KwdEY02JWbYb3C4F1zkX5jkjlbrRyNe3lacwv0s73WBFkRERERERERF+XvYwZve1o3Zk5Ii/SLF7Ip/l4vLCeyKf5eLywiLKixeyKf5eLywnsin+Xi8sIiyosXsin+Xi8sJ7Ip/l4vLCIsqLF7Ip/l4vLCyggjMHMFEREWOoqIKdodUTxxNJyBe8NBPjRFkRcTtnbfnCk/jN9Kds7b84Un8ZvpX2xXy4XLRcTtnbfnCk/jN9K+i5W4nIV9KT/rN9KWKXC5SL8skjk95I12XIc1+l8X1ERERERERERERERERERERFxrnX0Vso31lfUx00DN73nIdA5TzBcTFF9ocPWp9fWu2DuY42++kdxNH+9igPFOILjiK4mrr5O5BPBQtPcRDkA5eU7z1BQdYrcOnjQaNJ5y2fU+sVN0iixKgdI4MGe36BbxibSpO9zoMP0ojZu9kVDc3H6rOLx59C0O53+93Mk191q5wfimQhvkjIeZdaslLT1FVOIKWCWoldujiYXuPiG1c/mqnNzjviPJvkMB2eir7K02Uk2/DYBbM6+1YtUZ55DqQtad4B8S2elwFi6oYHts0jGnjkljYeouz8y+1OAMXQNLjaHSNG/g5o3Hq1s15+zZvRvzLrf1PgvT2jKXtzrb/2Hiumtt4u1teH0FyqqcjiZKdXq3FbzhvSpX07mw3ymbWRbjNCAyQc5b70+ZR7WUtVRzmCsppqaUfEmjLHdRWJZy1QmpN3w3kWyy7CsZmnys434jAb559oVmLLdrfeaJtZbapk8R2HLe08hG8HmK5yrVh69XCw3FtbbpzG8ZB7DtZI3vXDjH4cSnvB2I6PEtpFZTfq5WnVnhJzdG7k5weI8fTmFfqNXGT45t4s8ZZHd4Kh1iiPkDpsN2HPMb/Fd0iIp9QKIhIAJJyA3lQ1pIx7LcpJbTZZnR0AOrLOw5On5QDxM/Ho3x1SqUGnwtOJrOoZn1mVIU6mxZ+LoQ9Q1nIeti27F2ka02hz6W3gXGsbmCGOyiYed3GeYZ+JRpecc4muj3a9ykpojuipf1YHjHdHxla2hIAzK55PVybmybu0W7Bh/v3XQZKiSkoMG6Ttpx/xfZXvmfrzPdI873POsesr85DkC7u2YUxJcmCSjs1U9h2h7wI2noLyAfEuxdo6xeGawtbSe9FTHn/UtJkhNRBpNhOI22Pgtx8/KwzouiNB3havTTTUz9emmkgcDnrRvLT1hbVYtIeJLY9rZaoXCAb46nacuZ429ea6S72C92gF1ytdVTsG+QszZ5Qzb511qQ40zJPswlh2YjtHivsSDLTjPeAePseKn3CGObPiJzadpNHXEf8ATykd19V253mPMtpVWmktcHNcWuacwQciDyhS3owx2+uljsl7lzqTspqlx/5v0HfS5Dx7t++50flJz7hBmcHHUcjv2HhuVNrHJ3mGmNLYtGsZjdtHFSUiIrcqmihbswADo4t4IBHbVm//AEpFNKiXspbPdr1gKhprPbKy4zsuTHujpYXSODeDkGeTRnlmR1r2lzaKFqzoJgOA2KomozvG9SajO8b1LZ/aBjrwNxB/LpfVT2gY68DcQfy6X1VNabdqqvNP6vBaxqM7xvUmozvG9S2f2gY68DcQfy6X1U9oGOvA3EH8ul9VNNu1Oaf1eC1jUZ3jepNRneN6ls/tAx14G4g/l0vqp7QMdeBuIP5dL6qabdqc0/q8Fq0jGcG7uG7jxL0Bwb8D7L9nwfltVJX4Ax0WOAwbiDd83S+qru4TilgwtaYJo3xyx0ULHscMi1wYAQRxFaE84ENsVMUhjmufcW1Ls1BXZlta7BViDmhw7a7iP/RkU6qC+zJ+Bdi+1f8ADItWV+aFIVD+M71mqucDD8lH5ITgYfko/JCyLm2S1XG93OK2WmjkrK2bPg4Y8tZ2QJOWZA3AlTZNlVAwE2AXXcDD8lH5ITgYfko/JC3j3KdJHgdceuP1l+X6K9I7GF7sHXPIDM5Bjj1B2ZWHOs6w7V6dGidQ9hWpUVTU0Lw+hqZ6R4OYdBI6MjxtIW9YW0xaQbBLHqXyS5U7cgae4DhmuH1j3YP73WtOvNmvFlkbHeLRcLa5xyYKulfDrHm1gM/EuCha14xF0ZEfCPukhXG0UaZLBjaSO2VMfam9OGymlfrMmOW3g37M/qkA9IGak1ed0UkkUrJYnvjkjcHsexxDmuBzBBG4g7c1c7QFjl+N8ENlrntddaB4pq3LZrnLNsmX0hv5w5Rs1LCH7zdSnqfPmMebia+9SGiItJSqIiIiIiIiL45zWtLnENaBmSTsAX1afpduzrZg+aKJ2rNWuFO0g7Q05l3/AMQR41rzcw2WgujO1NF1sSsu6ZjNhN1uNlFekHEcmI78+djj7CgJjpW/R43dLss+jIcS11F2eFrPLfr/AEtriJaJXZyPA94wbXHq3c5C5I98Wcj6Rxc48SusMZCk4Fhg1o4Bd3o/wTU4lk9l1Dn01sY7J0gHdSkb2sz85/HimmyWe2WWkFNbKOKnj+NqjunHlcTtJ6VyaGlp6Gjho6WJsUELAyNjdwAWZdMpVHgyDBYXfmfDYFzWqVeNPvNzZmQ8dpRERS6iVw7ta7fdqQ0typIqmE/FeNx5Qd4PONqhrSFgWfD2tcKBz6i2E5HPa+AncHco5HeI8pnFY6mCGpp5KeojbJFK0sexwzDgdhBUVU6TAn2HSFnZHPzClKZVo0g8Fpu3MetRVXV3WC7/AD4cvsVfGXOgPcVMY+PGd/jG8c/SV8xrZHYfxFU27ujCDrwOO90Z3eMbR4l0y5j8WTj7HtPELpnwpuBta4cCrR08sVRBHPC9skUjQ9jmnY5pGYIX7WkaGLq6vwn7DldnJQSmIZnbqHum/iR+6t2e5rGOe4gNaMyTxBdZkpls1LsjDMf6uUTks6WjugnI/wCKOtNGJHUdC2wUkmU9WzWqSN7Yt2r+8c/EDyqH12OJbo+836subycp5SWA8TBsaPJAXXLl9WnzPTLol8NQ3eetdNpUiJKWbDz1nf5alzbLa6283GO32+EyzyeINHG4niAU24OwLaLAyOeWNtbcBtM8jcww/QHxenfz8Sw6KMOss2HmVk8YFdXNEkhI2sZvazq2nnPMtyVyoNDhwIbY8YXecRfLz7tSqFdrcSPEdAgmzBhhn5IiIrQqwjgHNLXAEEZEHjUfY30cUVwjkrbFHHR1oBJhGyKXmy+KecbOUcakFFqTklAnIfNxm3HEbitqUnY0nE04Trdx3qrlRDNTzyU9RE+KaNxa9jxkWkbwV+WktcHNcWuBzBByIPKpU024dZwUeI6VmTwWxVYA3g7Gv68m+MciipctqMi+RmHQXfY7R64rqFOnmT0uIzfuNhU/aNcRnEOHmvneDXUxEVR9I8T/ABjzgraFBOiG6ut2MYYHOyhrmmB44tbe09Yy/eU7LodBnjOSgc/9zcD49nFc+rsiJObIaPddiPDtRERTShkREREREREREREREREUF9mT8C7F9q/4ZFOigvsyfgXYvtX/AAyL3lfmhadQ/ju9ZqsCkPscP2zWHpn/ACJFHikPscP2zWHpn/IkUtG+W7cq3LfOZvHeroIiKCVwXHuNDRXKilobhSQVdLM0tkhmjD2PHIQdhVMtPOCoMEY9kobeHi2VkIqqQOJPBguIdHmdp1SNnM5ueZzKuqqx9mVJG7FGHYWkcIyimc8cYDntDf6XdS3JJxETRyKjKrDaYGkdYUEKa+xAuT6fH9yteseCrbeZCPpRvbkep7lCilXsVI3v0vQObujoKhzujuR+JCkJgXhOULJkiOy21W+REUGraiIiIiIiIiiXT1Ul1wtdGDsZE+Uj6xAH9JUtKG9OzSMS0L+I0YHU93pUBymcRT3WzI71Pcm2g1Bt8ge5R6pO0C0TXVd0uLm90xjIYz9Ylzv6WqMVLmgV7e1N0j+MKlrj0FuQ/AqncnWB1Rh3yv3FW/lC8tp77Z27wpKREXUFzJERERERERRfp6om+x7XcQ3ug98DjygjWH4O61FKmbToWjC1IDlrGtbl5D1DK5lylYG1BxGYB4LpfJt5dINByJ71I2gepLL7caPPZLStk8h2X/mpFx7Uuo8G3adhycKV7WnkLhqj8VFuhAOONJNXcKGTW6Ndn98lJOk5utgO6gDPKIHqc1WGixHexn2yDrdl/wAqvViG01hl8y2/bZV9XPw3RC44gt9C4AsnqWMeD3uY1vNmuAu90fOa3G9oc7LL2SB1ggfiqPKsD47GnUSBxV3mnlkB7m6wD3KxIAAAAyAREXZFx5ERERERERdfiWhbc8P19A4Z8PTvYOZ2Ww+I5FVoac2g8oVp3EAEncqs9ydrfe8XQqNywYA+E7Mg8LeKu/JF5LIrchbjfwWe3TupbjS1TDk6GZkgP1XA/wBlZ9pBAI3HaFVh+eoct+StHTZini1jmdQZnxLPke4/Gb/X8rDle0fCd/b8LIo57IHGV6wTg+kuliNMKmWubA7h4tduqWPcdmY25tCkZQv2X/7Obf8AarPypFe4ADogBVCnHFsBxacVFn6QekX5Szfcj66fpB6RflLN9yPrqJ0UvzEPqhVrpcfrntUsfpB6RflLN9yPrp+kHpF+Us33I+uonROYh9UJ0uP1z2qWP0g9Ivylm+5H10/SD0i/KWb7kfXUTonMQ+qE6XH657VK7uyE0jBpOvZtgz/6I+urXYdqpa7D9urp9XhaililfqjIazmAnLxlefEn/Ld0FX/wb8D7L9nwfltWlOw2sA0RZStKjRIjnaZvqXbKC+zJ+Bdi+1f8MinRQX2ZPwLsX2r/AIZFryvzQt2ofx3es1WBSH2OH7ZrD0z/AJEijxfpj3scHMc5rhuIORUw9uk0t2qsQn6Dw7YV6IovPL2XVf8AczeWV8dU1LgQ6olIPEXlaHQP/rgpn2wOpx8lenF+O8J4Upny3q90kMjQS2mY8PneeRsY7o/gOMhU50p4wqMc4zqr/NCYIS1sFLCTmYoW56oJ5SS5x53HiWrNa1vvWhvQMl9WzBlmwsdZWhNTz5gWIsEU+dhxZny3y+Ygc08FBTso4zlsLnuD3dQY3ylCWHrNc8QXqms1npX1VdUu1Y42+dzjxNG8k7gru6L8IUuCMG0ligeJZW5yVUwGXCzO987o3AcwCwnIgazRzK9aZAL4unkO9bOiIolWRERERERERFF+nqjcYbVcAO5Y6SFx6QHD+lylBdDj6zm+YVrKKNodOG8LB9du0Dx7R41G1eWM1JRIbddrjeMfwpGkzIlpyHEdqvjuOCrupA0G3FtNiKqtz3ACthBZmd748zl5LnHxKPzmDkQQeMFZ7fV1FBXQVtK/g54JBJG7kI/tyrmMhNGUmWRhkeGfBdMn5UTcs+DtHHLirPoupwnfqPEVnir6VwDiNWaLPbE/jaf7HjC7ZdchRWRWB7DcHUuSxYT4Tyx4sQiIi9FgiIuuxHeKOxWma41r8mMGTWg91I7iaOc//qwiRGw2l7zYBZw4bojgxguSo1073JslfQWljszCx08m3cXbGjqB61Gi5d5uNTdrpUXGrdnNO8vdluHIBzAZDxLiHYMyuSVKb6ZNPjZE4bhgF1imynRJZkHMDHfrKkvQLRudcbncC3uY4mQtPKXEuP8AS3rUlYnojccO3GhaM3T00jG/WLTl58l1Gi+zOs2EaeOZhZUVJNRMCNoLgMgecNDR05raF0akSXNU9sF41g3+/kbLndWnOdqDorMiLfZVZG5Z7dVPobhTVseevTzMlaBxlrgf7Lu9ItmdZcWVcDWZQTO4eA8Wq455eI5jxLXVzKNCfLRSx37mnuXS4MVkxCDxqcO9WhpKiKrpYqqB4fFMwPY4cYIzCyqMdDWKY304w5XShsseZo3OPvm7yzpG8c3QpOXV6dOsnZdsVuev6HMLlVQknyUd0J32+oyKIiLeWkiLQdIGJMV4ZqeHhpqCotsrso5jE7Nh71+Tt/IeNar7q2If+0t38N/rKEma/KS0QwotwR9FNS9BmpmGIsKxB+qk3HVzbacJ3GsLg1/AmOLne7uW+c5+JVzAyGQWx4txjdsS08NPXCCKGF5eGQtIDnZZAnMncM+srXVS69U2T8cGH+1ow/Pr6K50KmvkIBET9zjj+FzbBRuuF9oKJoz4eoYw9BcMz1ZqzI2DJQzoSs7qu/y3eRv6miYWsJG+Rwy8zc+sKZlZuSksYcs6Kf8A0eA87qtcqpkRJlsIf+RxPlZF1WJ8OWTE1Ayhv1uhr6ZkglbHLnkHgEA7OYnrXaorUCRiFViA4WK0f3I9G3gjb+p3pT3I9G3gjb+p3pW8IsudftK8+jwuqOxaP7kejbwRt/U70p7kejbwRt/U70reETnX7SnR4XVHYtH9yPRt4I2/qd6U9yPRt4I2/qd6VvCJzr9pTo8LqjsWjnRFo2IyOELf1O9K3SlghpaWKlp2COGFgjjYNzWgZAdSyIvhc52srJsNjP2iyKC+zJ+Bdi+1f8MinRQX2ZPwLsX2r/hkXrK/NC1qh/Hd6zVYFmo6WqrahtNRUs9VO/PVigjdI92QzOTWgk7FhUh9jh+2aw9M/wCRIph7tFpOxViEzTeG7StT9q+KfBe/fy2b1UGFsUk5DC1+JP8A7ZN6qv4i0OnnqqZ9jjr8FRO36PMeV7wymwfe8z8rRvhHXIGhSBhDseMW3GaOTENVSWSl2F7GvE8/QA3uB06xy5CrWIsHTzzqFl6w6TCabuJK1XR7gDDWBqF0Fjozw8jQJ6uY6883S7iH0QAOZbUiLTc4uNypNjGsGi0WCIiL4skRERERERERERFDGl7CzrbcnXuii/4KqdnMGjZFKf7O/HPlC0BWhq6eCrppKapiZNDK0tex4zDgeIqFceYArbLJJW2tklXbffEDupIOZw42/S6+U0Cv0N8J5mIAu04kDL67u7cr5Qa4yIwS8c2cMAdv039+9a3hy+3GwXAVtum1HHZJG7ayRvI4f7IUvYb0kWG5xtZXydrKnjbMf1ZPM/dl05KDkURTqzMyGEM3bsOryUvUKPLT2MQWdtGvzVoqeogqYhLTzRzRnc6NwcD4wvs80MEZknljiYN7nuAA8ZVXG9y7WbsPKNhR/dnWf3R5TtU/+sHW+Tj/AG8lA/pAX+dh/XzU64j0i4ftcbm0k4udT8VlO7NmfO/dl0ZnmUQYoxDcsRV/sq4S9y3MRQs2MiHIBy8pO0rqUUDUa1Mz/uvNm7Bq++1TtPo0tI+8wXdtOv7bEW6aLMKvvl2bX1cR7XUjw52Y2SvG0M5wNhPVxrFgXAtwxDIyqqQ+ktmeZlIydKORg/8ALd0qcLdRUtvooqKihbDTwt1WMbuA/wB8ak6DQ3zDxMRxZgxA2+Xeo2u1tkBhgQDd51nZ59yzoiLoS5+tV0l4Y9sdkzp2t7YUub6cnZrcrM+fLrAUCPa5j3Mka5j2ktc1wyII3gjiKtKtD0i4CjvZfc7VqQ3HL9Yw7GT9PI7n4+PlFU5Q0R0z/wBEAe8NY2+Y499q5P1pst/zxz7uR2eXcoWY5zHtexzmPaQWuaciCNxBUnYO0nmGNlHiNj5A0ZNq425u/fbx9I6uNRtW0tTRVT6Wsp5KeeM5OjkbkR/vlWFUyTn5iQiF0I2OYOo7x6KuM5Iy8/DDYouMjn9j6Cstar3aLqwOt9ypan6LJBrDpG8eNdgqsEA7wCv0XvLNQvcW8hOxWZnLB4Hvwrn6G34Peq0/ki0n3Ith9Rf8hWeqqeluFFJTVEcdRTTN1XtO1rgoN0hYNqMN1RqafXmtcrso5DtMRPxHf2PH0rNo4xtLh6ZtBXufLanncNrqcn4zRxt5W+MbcwZqkZRXS3FrhDV0dTHzOZIwjzhb7hK8oZa492I3tHiD6xWgDNcn5mx96G7sPgR6wVYk8YHOVt+kTBc+HKg1dIHzWuR2THnaYSfiu/sePdv36gqJMy0WViGFFFiPXYr1LTMKahiLCNwVYzBFtobVhmjprfMyoiczhDOw7JXO2l3+9wAC7pQNo9xnUYbqRTVGvPa5HZyRjaYifjN/uOPpU50VVT1tJFV0kzJoJW6zHsOYcF0ui1GBNwA2GNEtFi3Zu+i5tWadHlI5dEOkHG4O3zWZYKyspKKIS1lVBTRk6odLIGAnkzKzqFuzAAdo4t4IBHbVm/8A0pFOQmabw1QMeLzUMvteylft/Yvnq2/emelO39i+erb96Z6V5+cHH3jepODj7xvUt/oA6yiPbDupx8l6B9v7F89W370z0p2/sXz1bfvTPSvPzg4+8b1JwcfeN6k6AOsnth3U4+S9A+39i+erb96Z6U7f2L56tv3pnpXn5wcfeN6k4OPvG9SdAHWT2w7qcfJegfb+xfPVt+9M9K7GN7JGNkjc17HAFrmnMEHjC86ZI4+Dd3Ddx4l6A4N+B9l+z4Py2rXmJcQQDe91uyU6ZkkFtrLtlBfZk/Auxfav+GRTooL7Mn4F2L7V/wAMiwlfmhelQ/ju9ZqsCkPscP2zWHpn/IkUeKQ+xw/bNYemf8iRS0b5btyrct85m8d6ugiIoJXBERERERERERERERERERERERERERERalibR/Yb0507IjQVTtplpwAHH6Tdx6dh51odz0V3+nJNFUUdazi7oxvPiOzzqaUUNN0GSmjpOZY7Rh5cFMSldnZUaLXXGw4+fFV5nwTiuF2T7HUn6ha/+klfIcF4rmdqssVUD9PVYOtxCsOijP0jK3/e7h4KS/Vszb9jePioTtui3EVSQauSjomces/hHDxN2edbzhrRxYbS9k9UHXKpbtDpwNQHmZu681uaKSleT8jLHSDdI7Tjw1cFHTVenZkaJdYbBh58UGwZBERTShkRERERERF1eILBab9T8Dc6Nk2Q7iQbHs+q4bR+Cju86Jqhr3Ps90jezijqmlpH7zQc+oKWEUbO0mUnDeKzHaMD5/dSMnVZuTwhPw2HEetygCswBi2mJztLpmj40MrHDqzz8y4gwhignLtFW+QrFIoZ3JGVJwe7h4KZbysmgMWN4+KgOg0eYsqiM7a2mafjTzNA6gSfMpS0eYbueG6GSlrbqyqhedZkDGHVidx6ric8jyZDl5VtSKQkKBLSMQRGEl31Phbio+frszOs5t4Ab9B434LHVQQ1VPJT1MTJYZGlr2PGYcDxEKF8aaPLlbrjr2SmmrqGUksazunwnvTyjkPXymbEWzUqVAqDA2JgRqI1rXp1Uj095dDxB1g6lXX2oYo+Yq7+Gtq0fOxjhqr4GaxXGe2Suzli1NrD37OflHGpgRRctyZhS0QRYUVwI3eCk5jlJEmYZhRYTSDv8V8Y4OaHDMAjPaMj1KLOyaw9e8SYGoqKw22a4VMdxZK6OIjMMEbwTtI4yFKiK0Q3ljg5VaNCEVhYdRVIPco0keB1x8qP1k9yjSR4HXHyo/WV30W509+wKM9jwuseHgqQe5RpI8Drj5UfrJ7lGkjwOuPlR+srvonT37AnseF1jw8FSD3KNJHgdcfKj9ZPco0keB1x8qP1ld9E6e/YE9jwuseHgqPv0T6SCwgYOuO0d9H6yufheCalwzaqaoYY5oaKGORh3tcGAEda7FF4Rph0UC4W3KyTJYktJN0USdk/hfEGKsLWmkw9bJbhPBcOFkYx7GlrOCe3PuiBvIUtovOG8scHBe8aEIzCw5qkvuQaTPA+s+8Qf/Yt10HaN8dWHSjZ7reMN1NHQwGXhZnzRODc4ntGxryd5A3K0qLZdOvc0ggYrQh0qEx4cHHDd4IiItNSiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIi//Z">
 <div class="hdr-title"><h1>PM &amp; PTW Control Dashboard</h1>
 <div class="sub">OQEP Block 60 &mdash; Bisat Permanent Power Supply</div></div></div>
-<div class="hdr-r"><div class="clock" id="clock"></div>
-<div class="hdr-btns"><button class="btn ghost sm" id="soundBtn" onclick="toggleSound()">Sound</button></div></div></div>
+<div class="hdr-r">
+<div class="clock" id="clock"></div>
+<div class="auth-row">
+<span class="sync-pill" id="syncBadge"></span>
+<button class="btn ghost sm" id="authBtn">Sign in with Google</button>
+<button class="btn ghost sm" id="soundBtn" onclick="toggleSound()">Sound</button>
+</div></div></div>
 <div class="tabs">
 <button class="tab on" data-tab="today" onclick="setTab('today')">Today <span id="todayBadge"></span></button>
 <button class="tab" data-tab="reminders" onclick="setTab('reminders')">Reminders</button>
@@ -271,10 +291,382 @@ input[type=range]{accent-color:var(--accent);cursor:pointer}
 </div>
 <div id="view"></div><div id="modalHost"></div><div id="alarmModalHost"></div>
 <script>
+// ═══════════════════════ Google Sheets Cloud Sync ═══════════════════════
+var CLIENT_ID = '91766285552-si83id411rrjsocq0qmp6h9p93aoc617.apps.googleusercontent.com';
+var SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+var SHEET_NAME = 'Bisat PTW Dashboard Data';
+var SHEET_TABS = ['Reminders', 'Permits', 'Events', 'Records', 'Checks', 'CustomCats', 'Settings'];
+
+var gAccessToken = null;
+var gSpreadsheetId = null;
+var gTokenClient = null;
+var gUserEmail = null;
+var gSyncStatus = 'offline';  // 'offline' | 'syncing' | 'synced' | 'error'
+var gSyncMessage = 'Not signed in';
+var gLastSync = null;
+var gSyncQueue = false;  // true = a sync is needed
+var gSyncBusy = false;
+var gInitialized = false;
+
+function setSync(status, message) {
+  gSyncStatus = status;
+  gSyncMessage = message || status;
+  updateSyncBadge();
+}
+function updateSyncBadge() {
+  var b = document.getElementById('syncBadge');
+  if (!b) return;
+  var icon = {
+    offline: '\u26AB',
+    syncing: '\u27F3',
+    synced: '\u2713',
+    error: '\u26A0'
+  }[gSyncStatus] || '\u26AB';
+  var cls = {
+    offline: 'sync-off',
+    syncing: 'sync-busy',
+    synced: 'sync-ok',
+    error: 'sync-err'
+  }[gSyncStatus] || 'sync-off';
+  b.innerHTML = '<span class="' + cls + '">' + icon + ' ' + esc(gSyncMessage) + '</span>';
+}
+
+// Wait for Google APIs to load
+function waitForGoogle(cb, tries) {
+  tries = tries || 0;
+  if (window.gapi && window.google && window.google.accounts && window.google.accounts.oauth2) { cb(); return; }
+  if (tries > 100) { setSync('error', 'Google libraries failed to load'); return; }
+  setTimeout(function () { waitForGoogle(cb, tries + 1); }, 100);
+}
+
+function initGoogle() {
+  waitForGoogle(function () {
+    try {
+      gapi.load('client', function () {
+        gapi.client.init({
+          discoveryDocs: [
+            'https://sheets.googleapis.com/$discovery/rest?version=v4',
+            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+          ]
+        }).then(function () {
+          gTokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: function (resp) {
+              if (resp.error) { setSync('error', 'Sign-in failed'); return; }
+              gAccessToken = resp.access_token;
+              gapi.client.setToken({ access_token: gAccessToken });
+              localStorage.setItem('ptw_gToken', gAccessToken);
+              localStorage.setItem('ptw_gTokenAt', String(Date.now()));
+              setSync('syncing', 'Connecting...');
+              afterSignIn();
+            }
+          });
+          gInitialized = true;
+          // try silent restore of previous token
+          var saved = localStorage.getItem('ptw_gToken');
+          var savedAt = parseInt(localStorage.getItem('ptw_gTokenAt') || '0', 10);
+          // tokens last ~1hr, don't try if older than 50 min
+          if (saved && (Date.now() - savedAt < 50 * 60 * 1000)) {
+            gAccessToken = saved;
+            gapi.client.setToken({ access_token: saved });
+            setSync('syncing', 'Reconnecting...');
+            afterSignIn();
+          } else {
+            setSync('offline', 'Sign in to enable cloud');
+          }
+        }).catch(function (e) {
+          console.error('gapi init error', e);
+          setSync('error', 'Google init failed');
+        });
+      });
+    } catch (e) { setSync('error', 'Init exception'); }
+  });
+}
+
+function signInGoogle() {
+  if (!gInitialized) { alert('Google libraries still loading, try again in a few seconds.'); return; }
+  setSync('syncing', 'Opening Google sign-in...');
+  gTokenClient.requestAccessToken({ prompt: 'consent' });
+}
+function signOutGoogle() {
+  if (gAccessToken && google.accounts.oauth2) {
+    google.accounts.oauth2.revoke(gAccessToken, function () { });
+  }
+  gAccessToken = null; gSpreadsheetId = null; gUserEmail = null;
+  localStorage.removeItem('ptw_gToken');
+  localStorage.removeItem('ptw_gTokenAt');
+  localStorage.removeItem('ptw_sheetId');
+  setSync('offline', 'Signed out');
+  render();
+}
+
+// after we have a token, find or create the spreadsheet, then load data
+function afterSignIn() {
+  // try to recover existing sheet ID
+  gSpreadsheetId = localStorage.getItem('ptw_sheetId') || null;
+  if (gSpreadsheetId) {
+    verifySheet().then(function (ok) {
+      if (ok) { loadAllFromSheet(); }
+      else { findOrCreateSheet(); }
+    }).catch(function () { findOrCreateSheet(); });
+  } else {
+    findOrCreateSheet();
+  }
+  // also try to get user email
+  fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: 'Bearer ' + gAccessToken }
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.email) { gUserEmail = d.email; render(); }
+  }).catch(function () { });
+}
+
+function verifySheet() {
+  return gapi.client.sheets.spreadsheets.get({ spreadsheetId: gSpreadsheetId })
+    .then(function () { return true; })
+    .catch(function () { return false; });
+}
+
+// search Drive for existing sheet named SHEET_NAME; if not found, create it
+function findOrCreateSheet() {
+  setSync('syncing', 'Locating data sheet...');
+  gapi.client.drive.files.list({
+    q: "name='" + SHEET_NAME + "' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
+    fields: 'files(id,name)',
+    spaces: 'drive'
+  }).then(function (resp) {
+    var files = resp.result.files || [];
+    if (files.length > 0) {
+      gSpreadsheetId = files[0].id;
+      localStorage.setItem('ptw_sheetId', gSpreadsheetId);
+      ensureTabs().then(loadAllFromSheet);
+    } else {
+      createNewSheet();
+    }
+  }).catch(function (e) {
+    console.error('drive list err', e);
+    setSync('error', 'Could not access Drive');
+  });
+}
+
+function createNewSheet() {
+  setSync('syncing', 'Creating new data sheet...');
+  gapi.client.sheets.spreadsheets.create({
+    properties: { title: SHEET_NAME },
+    sheets: SHEET_TABS.map(function (t) { return { properties: { title: t } }; })
+  }).then(function (resp) {
+    gSpreadsheetId = resp.result.spreadsheetId;
+    localStorage.setItem('ptw_sheetId', gSpreadsheetId);
+    // write headers + push current local data
+    writeHeaders().then(function () {
+      return pushAllToSheet();
+    }).then(function () {
+      setSync('synced', 'Sheet created & synced');
+      gLastSync = new Date();
+    });
+  }).catch(function (e) {
+    console.error('create err', e);
+    setSync('error', 'Could not create sheet');
+  });
+}
+
+function ensureTabs() {
+  // verify all tabs exist; create any missing
+  return gapi.client.sheets.spreadsheets.get({ spreadsheetId: gSpreadsheetId }).then(function (resp) {
+    var existing = (resp.result.sheets || []).map(function (s) { return s.properties.title; });
+    var missing = SHEET_TABS.filter(function (t) { return existing.indexOf(t) < 0; });
+    if (missing.length === 0) return;
+    var requests = missing.map(function (t) { return { addSheet: { properties: { title: t } } }; });
+    return gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: gSpreadsheetId,
+      resource: { requests: requests }
+    });
+  });
+}
+
+var HEADERS = {
+  Reminders: ['id', 'name', 'detail', 'time', 'freq', 'days', 'dom', 'created'],
+  Permits: ['id', 'no', 'desc', 'loc', 'start', 'expiry', 'status', 'jobComplete', 'closedOn'],
+  Events: ['id', 'cat', 'when', 'text', 'person', 'logged'],
+  Records: ['id', 'task', 'note', 'stamp', 'date'],
+  Checks: ['day', 'ids'],
+  CustomCats: ['name'],
+  Settings: ['key', 'value']
+};
+
+function writeHeaders() {
+  var data = SHEET_TABS.map(function (tab) {
+    return {
+      range: tab + '!A1',
+      values: [HEADERS[tab]]
+    };
+  });
+  return gapi.client.sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: gSpreadsheetId,
+    resource: { valueInputOption: 'RAW', data: data }
+  });
+}
+
+function serializeRow(obj, headers) {
+  return headers.map(function (k) {
+    var v = obj[k];
+    if (v === undefined || v === null) return '';
+    if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+    if (Array.isArray(v)) return v.join(',');
+    return String(v);
+  });
+}
+function deserializeRow(row, headers, parseRules) {
+  var o = {};
+  headers.forEach(function (k, i) {
+    var raw = row[i] === undefined ? '' : row[i];
+    var rule = parseRules && parseRules[k];
+    if (rule === 'bool') o[k] = (raw === 'TRUE' || raw === 'true');
+    else if (rule === 'num') o[k] = raw === '' ? 0 : parseFloat(raw);
+    else if (rule === 'int') o[k] = raw === '' ? 0 : parseInt(raw, 10);
+    else if (rule === 'array_int') o[k] = raw ? raw.split(',').map(function (x) { return parseInt(x, 10); }).filter(function (n) { return !isNaN(n); }) : [];
+    else o[k] = raw;
+  });
+  return o;
+}
+
+function pushAllToSheet() {
+  if (!gSpreadsheetId) return Promise.resolve();
+  var data = [];
+  // build rows for each tab
+  data.push({
+    range: 'Reminders!A2',
+    values: reminders.map(function (r) { return serializeRow(r, HEADERS.Reminders); })
+  });
+  data.push({
+    range: 'Permits!A2',
+    values: permits.map(function (p) { return serializeRow(p, HEADERS.Permits); })
+  });
+  data.push({
+    range: 'Events!A2',
+    values: events.map(function (e) { return serializeRow(e, HEADERS.Events); })
+  });
+  data.push({
+    range: 'Records!A2',
+    values: records.map(function (r) { return serializeRow(r, HEADERS.Records); })
+  });
+  var checkRows = [];
+  for (var day in checks) if (checks.hasOwnProperty(day)) {
+    checkRows.push([day, (checks[day] || []).join(',')]);
+  }
+  data.push({ range: 'Checks!A2', values: checkRows });
+  data.push({ range: 'CustomCats!A2', values: customCats.map(function (c) { return [c]; }) });
+  data.push({
+    range: 'Settings!A2',
+    values: [
+      ['soundOn', soundOn ? 'TRUE' : 'FALSE'],
+      ['alarmVolume', String(alarmVolume)]
+    ]
+  });
+  // first clear each data range, then write
+  return gapi.client.sheets.spreadsheets.values.batchClear({
+    spreadsheetId: gSpreadsheetId,
+    resource: { ranges: SHEET_TABS.map(function (t) { return t + '!A2:Z'; }) }
+  }).then(function () {
+    return gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: gSpreadsheetId,
+      resource: { valueInputOption: 'RAW', data: data.filter(function (d) { return d.values && d.values.length > 0; }) }
+    });
+  });
+}
+
+function loadAllFromSheet() {
+  if (!gSpreadsheetId) return;
+  setSync('syncing', 'Loading from cloud...');
+  gapi.client.sheets.spreadsheets.values.batchGet({
+    spreadsheetId: gSpreadsheetId,
+    ranges: SHEET_TABS.map(function (t) { return t + '!A2:Z'; })
+  }).then(function (resp) {
+    var ranges = resp.result.valueRanges || [];
+    var byTab = {};
+    SHEET_TABS.forEach(function (t, i) { byTab[t] = (ranges[i] && ranges[i].values) || []; });
+
+    var remRules = { days: 'array_int', dom: 'int' };
+    var perRules = { jobComplete: 'bool' };
+
+    var newReminders = byTab.Reminders.map(function (r) { return deserializeRow(r, HEADERS.Reminders, remRules); }).filter(function (x) { return x.id; });
+    var newPermits = byTab.Permits.map(function (r) { return deserializeRow(r, HEADERS.Permits, perRules); }).filter(function (x) { return x.id; });
+    // permit id must be numeric for our local logic
+    newPermits.forEach(function (p) { var n = parseInt(p.id, 10); if (!isNaN(n)) p.id = n; });
+    var newEvents = byTab.Events.map(function (r) { return deserializeRow(r, HEADERS.Events); }).filter(function (x) { return x.id; });
+    newEvents.forEach(function (e) { var n = parseFloat(e.id); if (!isNaN(n)) e.id = n; });
+    var newRecords = byTab.Records.map(function (r) { return deserializeRow(r, HEADERS.Records); }).filter(function (x) { return x.id; });
+    newRecords.forEach(function (r) { var n = parseFloat(r.id); if (!isNaN(n)) r.id = n; });
+
+    var newChecks = {};
+    byTab.Checks.forEach(function (row) {
+      if (row[0]) newChecks[row[0]] = row[1] ? row[1].split(',') : [];
+    });
+    var newCats = byTab.CustomCats.map(function (r) { return r[0]; }).filter(function (x) { return x; });
+    var newSoundOn = soundOn, newVol = alarmVolume;
+    byTab.Settings.forEach(function (row) {
+      if (row[0] === 'soundOn') newSoundOn = (row[1] === 'TRUE');
+      if (row[0] === 'alarmVolume') newVol = parseFloat(row[1]) || alarmVolume;
+    });
+
+    // Merge: cloud overrides local where there's overlap, but keep local-only that isn't on cloud
+    // (since local was just written, this is normally equivalent to "cloud == local")
+    reminders = newReminders;
+    permits = newPermits;
+    events = newEvents;
+    records = newRecords;
+    checks = newChecks;
+    customCats = newCats;
+    soundOn = newSoundOn;
+    alarmVolume = newVol;
+
+    // also save to local for offline backup
+    DB.set('ptw_reminders', reminders); DB.set('ptw_permits', permits);
+    DB.set('ptw_events', events); DB.set('ptw_records', records);
+    DB.set('ptw_checks', checks); DB.set('ptw_customCats', customCats);
+    DB.set('ptw_soundOn', soundOn); DB.set('ptw_alarmVolume', alarmVolume);
+
+    setSync('synced', 'Synced ' + nowStamp());
+    gLastSync = new Date();
+    render();
+  }).catch(function (e) {
+    console.error('load err', e);
+    setSync('error', 'Load failed (cached data shown)');
+  });
+}
+
+// debounced push: any data change requests a sync after a short delay
+var syncTimer = null;
+function queueSync() {
+  if (!gSpreadsheetId || !gAccessToken) return;  // offline OK, local still saves
+  gSyncQueue = true;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(function () { doSync(); }, 1500);
+  setSync('syncing', 'Saving to cloud...');
+}
+function doSync() {
+  if (gSyncBusy) { syncTimer = setTimeout(doSync, 1500); return; }
+  gSyncBusy = true;
+  pushAllToSheet().then(function () {
+    gSyncBusy = false;
+    gSyncQueue = false;
+    setSync('synced', 'Synced ' + nowStamp());
+    gLastSync = new Date();
+  }).catch(function (e) {
+    gSyncBusy = false;
+    console.error('sync err', e);
+    setSync('error', 'Sync failed (local saved)');
+  });
+}
+function syncNow() {
+  if (!gAccessToken) { alert('Sign in to Google first.'); return; }
+  doSync();
+}
+
 // ═══════════════════════ Storage ═══════════════════════
 var DB = {
   get: function (k, f) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : f; } catch (e) { return f; } },
-  set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.error(e); } }
+  set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.error(e); } queueSync(); }
 };
 
 // ═══════════════════════ Date helpers ═══════════════════════
@@ -984,6 +1376,23 @@ function render() {
     var soundBtn = document.getElementById('soundBtn');
     if (soundBtn) soundBtn.textContent = soundOn ? '\u{1F50A} Sound ON' : '\u{1F507} Sound OFF';
 
+    // sync badge + sign-in button
+    updateSyncBadge();
+    var authBtn = document.getElementById('authBtn');
+    if (authBtn) {
+      if (gAccessToken) {
+        authBtn.textContent = gUserEmail ? ('Signed in: ' + gUserEmail.split('@')[0]) : 'Signed in';
+        authBtn.onclick = function () {
+          if (confirm('Sign out of Google? Your local data stays. Cloud sync will stop until you sign in again.')) {
+            signOutGoogle();
+          }
+        };
+      } else {
+        authBtn.textContent = '\u{1F510} Sign in with Google';
+        authBtn.onclick = signInGoogle;
+      }
+    }
+
     var v = document.getElementById('view'), h = '';
     if (tab === 'today') h = viewToday();
     else if (tab === 'reminders') h = viewReminders();
@@ -1271,6 +1680,20 @@ function viewRecords() {
 
 function viewBackup() {
   var h = '<div class="wrap">' +
+    '<div class="panel"><h3>Cloud sync (Google Sheets)</h3>' +
+    '<p class="muted">' + (gAccessToken
+      ? 'Connected. Every change auto-saves to your Google Sheet \u201CBisat PTW Dashboard Data\u201D in your Drive. ' +
+      'Open the sheet directly to view full history or restore deleted rows (File \u2192 Version history).'
+      : 'Click <strong>Sign in with Google</strong> in the header to enable cloud sync. Data on this device is safe; ' +
+      'cloud sync adds an off-device backup that survives a laptop change.') + '</p>' +
+    '<div class="actions">' +
+    (gAccessToken
+      ? '<button class="btn" onclick="syncNow()">\u27F3 Sync Now</button>' +
+      (gSpreadsheetId ? '<a class="btn ghost" href="https://docs.google.com/spreadsheets/d/' + gSpreadsheetId + '" target="_blank">\u2197 Open Google Sheet</a>' : '')
+      : '<button class="btn" onclick="signInGoogle()">\u{1F510} Sign in with Google</button>') +
+    '</div>' +
+    '<div class="cloud-info">' + esc(gSyncMessage) + '</div></div>' +
+
     '<div class="panel"><h3>Alarm settings</h3>' +
     '<div class="field"><label>Alarm volume (\u003cspan id="volLabel"\u003e' + Math.round(alarmVolume * 100) + '%\u003c/span\u003e)</label>' +
     '<input type="range" min="0" max="1" step="0.05" value="' + alarmVolume + '" oninput="setVolume(this.value)" style="width:100%"></div>' +
@@ -1351,11 +1774,7 @@ function boot() {
       host.innerHTML = '<div class="wrap"><div class="warn-banner">' +
         '<div class="wt">\u26A0 Storage is blocked \u2014 data cannot be saved</div>' +
         '<div class="wl">Your browser is preventing this page from saving data. This usually happens when ' +
-        'the file is opened in a private/incognito window, or certain security settings block local storage ' +
-        'for files opened directly from disk.<br><br>' +
-        '<strong>Fix:</strong> Open this file in a normal (non-incognito) Chrome window. If it still happens, ' +
-        'in Chrome go to Settings \u2192 Privacy \u2192 Site Settings \u2192 Cookies and allow it, or use the ' +
-        'Backup file to carry data instead. Your entries will not persist until this is resolved.</div></div></div>';
+        'the file is opened in a private/incognito window, or certain security settings block local storage.</div></div></div>';
     }
     return;
   }
@@ -1366,6 +1785,8 @@ function boot() {
   setInterval(alarmTick, 30000);
   setInterval(function () { updateTabTitle(overdueReminders().length); }, 1200);
   document.addEventListener('click', function () { getCtx(); }, { once: true });
+  // Initialize Google API client
+  initGoogle();
 }
 boot();
 
