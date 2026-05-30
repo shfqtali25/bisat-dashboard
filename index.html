@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM &amp; PTW Dashboard</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* OQEP brand */
+  --oqep-orange:#E87722;
+  --oqep-orange-lt:#FF9442;
+  --oqep-teal:#1B4D5A;
+  --oqep-teal-dk:#0F2F38;
+  /* Dashboard system */
+  --bg:#0a1318;
+  --bg2:#0f1c23;
+  --panel:#14252e;
+  --panel2:#1a2f3a;
+  --line:#26404e;
+  --line-hi:#345768;
+  --ink:#eef4f8;
+  --dim:#8aa3b3;
+  --dim2:#5c7585;
+  --accent:var(--oqep-orange);
+  --accent-soft:rgba(232,119,34,.14);
+  --teal:var(--oqep-teal);
+  --teal-lt:#3a8ea3;
+  --green:#3bb273;
+  --amber:#f2a541;
+  --red:#e34234;
+  --red-dk:#a02b22;
+}
+html,body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;
+  min-height:100vh;-webkit-font-smoothing:antialiased;font-feature-settings:'cv11','ss01';
+  background-image:radial-gradient(circle at 20% -10%,rgba(232,119,34,.06),transparent 50%),
+    radial-gradient(circle at 80% 110%,rgba(27,77,90,.18),transparent 55%);}
+body.alarm-on{animation:bodyflash 1.05s infinite}
+@keyframes bodyflash{0%,100%{background-color:var(--bg)}50%{background-color:#2a0e10}}
+
+/* ════════ Header ════════ */
+.hdr{background:linear-gradient(110deg,var(--oqep-teal-dk) 0%,var(--oqep-teal) 70%,#235b6a 100%);
+  border-bottom:1px solid var(--line-hi);padding:18px 28px;display:flex;justify-content:space-between;
+  align-items:center;flex-wrap:wrap;gap:18px;position:relative;overflow:hidden}
+.hdr::before{content:'';position:absolute;top:0;right:0;width:240px;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(232,119,34,.08));pointer-events:none}
+.hdr-l{display:flex;align-items:center;gap:18px}
+.hdr-logo{height:44px;width:auto;background:rgba(255,255,255,.96);padding:7px 13px;border-radius:6px;
+  box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.hdr-title h1{font-size:18px;font-weight:800;letter-spacing:.2px;color:#fff}
+.hdr-title .sub{font-size:10.5px;color:#9fc4cf;margin-top:3px;text-transform:uppercase;
+  letter-spacing:1.6px;font-weight:600}
+.hdr-r{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.clock{font-size:11.5px;color:#cae0e5;font-family:'JetBrains Mono',monospace;font-weight:500;
+  background:rgba(0,0,0,.22);padding:7px 11px;border-radius:5px;border:1px solid rgba(255,255,255,.08)}
+.hdr-btns{display:flex;gap:7px;flex-wrap:wrap}
+
+/* ════════ Tabs ════════ */
+.tabs{display:flex;gap:0;background:var(--bg2);border-bottom:1px solid var(--line);
+  padding:0 18px;flex-wrap:wrap;box-shadow:0 1px 0 rgba(255,255,255,.02)}
+.tab{background:none;border:none;color:var(--dim);cursor:pointer;padding:14px 16px;font-family:'Inter';
+  font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;
+  border-bottom:2.5px solid transparent;transition:.15s;position:relative}
+.tab:hover{color:var(--ink);background:rgba(255,255,255,.02)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .badge{display:inline-block;background:var(--red);color:#fff;font-size:10px;border-radius:9px;
+  padding:1px 6px;margin-left:5px;font-family:'JetBrains Mono';animation:pulse 1.2s infinite;font-weight:700}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.93)}}
+
+.wrap{padding:24px 28px 80px;max-width:980px}
+.secttl{font-size:11.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--accent);
+  font-weight:800;margin:24px 0 13px;display:flex;align-items:center;gap:10px}
+.secttl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.secttl.dim{color:var(--dim)}
+
+/* ════════ Panels ════════ */
+.panel{background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:18px;
+  box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.18)}
+.panel h3{font-size:12px;text-transform:uppercase;letter-spacing:1.1px;color:var(--accent);
+  margin-bottom:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.panel h3::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px}
+.muted{font-size:12.5px;color:var(--dim);line-height:1.65;margin-bottom:14px}
+
+/* ════════ Forms ════════ */
+.field{margin-bottom:13px}
+.field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;
+  color:var(--dim);margin-bottom:5px;font-weight:600}
+.field input,.field textarea,.field select{width:100%;background:var(--bg);
+  border:1.5px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:6px;
+  font-size:13.5px;font-family:'Inter';transition:.15s}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;
+  border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input[type=file]{padding:8px;cursor:pointer}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:11px;color:var(--dim);margin-top:6px;font-style:italic;line-height:1.5}
+.daypick{display:flex;gap:7px;flex-wrap:wrap}
+.daybox{display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);
+  padding:8px 12px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s}
+.daybox:hover{border-color:var(--accent)}
+.daybox input{width:auto;cursor:pointer}
+
+/* ════════ Buttons ════════ */
+.btn{background:var(--accent);color:#fff;border:none;cursor:pointer;padding:11px 20px;
+  border-radius:6px;font-family:'Inter';font-weight:700;font-size:12.5px;text-transform:uppercase;
+  letter-spacing:.7px;transition:.15s;box-shadow:0 2px 8px rgba(232,119,34,.25)}
+.btn:hover{background:var(--oqep-orange-lt);box-shadow:0 4px 12px rgba(232,119,34,.35);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.sm{padding:7px 13px;font-size:11px;box-shadow:none}
+.btn.ghost{background:transparent;border:1.5px solid var(--line-hi);color:var(--ink);box-shadow:none}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);transform:none}
+.btn.ghost.danger{color:var(--dim)}
+.btn.ghost.danger:hover{border-color:var(--red);color:var(--red);background:rgba(227,66,52,.1)}
+.btn.green{background:var(--green);box-shadow:0 2px 8px rgba(59,178,115,.25)}
+.btn.green:hover{background:#4cc285;box-shadow:0 4px 12px rgba(59,178,115,.35)}
+.btn.red{background:var(--red);box-shadow:0 2px 8px rgba(227,66,52,.25)}
+.btn.red:hover{background:#ed5547;box-shadow:0 4px 12px rgba(227,66,52,.35)}
+.actions{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap}
+.note{font-size:11.5px;color:var(--dim);margin-top:15px;line-height:1.7;
+  border-top:1px solid var(--line);padding-top:13px}
+.empty{text-align:center;color:var(--dim);font-size:13px;padding:36px 14px;line-height:1.8;
+  border:1.5px dashed var(--line);border-radius:8px;background:rgba(255,255,255,.01)}
+
+/* ════════ Banners ════════ */
+.alarm-banner{background:linear-gradient(110deg,#5a1418,#7a1d22);border:2px solid var(--red);
+  border-radius:10px;padding:16px 18px;margin-bottom:16px;animation:bannerflash 1.05s infinite;
+  box-shadow:0 8px 24px rgba(227,66,52,.25)}
+@keyframes bannerflash{0%,100%{box-shadow:0 8px 24px rgba(227,66,52,.25)}
+  50%{box-shadow:0 8px 28px rgba(227,66,52,.65),0 0 0 4px rgba(227,66,52,.18)}}
+.alarm-banner .ab-top{font-weight:800;font-size:14px;color:#fff;letter-spacing:.5px}
+.alarm-banner .ab-sub{font-size:12.5px;color:#ffd9d6;margin-top:6px;line-height:1.6}
+.warn-banner{background:linear-gradient(110deg,rgba(227,66,52,.14),rgba(242,165,65,.1));
+  border:1.5px solid var(--red);border-radius:9px;padding:14px 17px;margin-bottom:16px}
+.warn-banner .wt{font-weight:700;font-size:13px;color:#ff8e83;text-transform:uppercase;letter-spacing:.7px}
+.warn-banner .wl{font-size:12.5px;margin-top:7px;line-height:1.65}
+
+/* ════════ Task cards (Today) ════════ */
+.task{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);
+  border-left:4px solid var(--dim);border-radius:8px;padding:14px 17px;margin-bottom:9px;transition:.15s}
+.task.st-done{border-left-color:var(--green);opacity:.65}
+.task.st-upcoming{border-left-color:var(--dim)}
+.task.st-due{border-left-color:var(--amber);background:linear-gradient(90deg,rgba(242,165,65,.06),var(--panel) 60%)}
+.task.st-overdue{border-left-color:var(--red);background:#2a1014;animation:taskflash 1.05s infinite}
+@keyframes taskflash{0%,100%{background:#2a1014}50%{background:#411820}}
+.cbox{width:24px;height:24px;border-radius:6px;border:2px solid var(--dim);flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;font-size:15px;font-weight:900;cursor:pointer;margin-top:1px;
+  transition:.15s}
+.cbox:hover{border-color:var(--accent)}
+.task.st-done .cbox{background:var(--green);border-color:var(--green);color:#fff}
+.task.st-overdue .cbox{border-color:var(--red)}
+.t-body{flex:1}
+.t-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.t-time{font-family:'JetBrains Mono';font-weight:700;font-size:13px;background:var(--bg);
+  border:1px solid var(--line);color:var(--accent);padding:3px 9px;border-radius:5px}
+.t-name{font-weight:700;font-size:14px}
+.task.st-done .t-name{text-decoration:line-through;color:var(--dim)}
+.t-pill{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  padding:3px 9px;border-radius:11px}
+.t-pill.done{background:rgba(59,178,115,.2);color:#6dd29b}
+.t-pill.up{background:rgba(138,163,179,.16);color:var(--dim)}
+.t-pill.due{background:rgba(242,165,65,.2);color:var(--amber)}
+.t-pill.overdue{background:var(--red);color:#fff;animation:pulse 1.2s infinite}
+.t-detail{font-size:12px;color:var(--dim);margin-top:5px;line-height:1.55}
+.t-freq{font-size:10.5px;color:var(--dim2);margin-top:5px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.5px}
+.t-actions{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+
+/* ════════ Reminder cards ════════ */
+.rm-card{display:flex;gap:15px;align-items:center;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:13px 16px;margin-bottom:9px;transition:.15s}
+.rm-card:hover{border-color:var(--line-hi)}
+.rm-left .rm-time{font-family:'JetBrains Mono';font-weight:700;font-size:15px;background:var(--accent);
+  color:#fff;padding:7px 11px;border-radius:6px;box-shadow:0 2px 6px rgba(232,119,34,.3)}
+.rm-mid{flex:1}
+.rm-name{font-weight:700;font-size:14px}
+.rm-detail{font-size:12px;color:var(--dim);margin-top:3px}
+.rm-freq{font-size:10.5px;color:var(--accent);margin-top:4px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px}
+.rm-act{display:flex;gap:7px;flex-wrap:wrap}
+
+/* ════════ Permits ════════ */
+.permit{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  border-radius:9px;padding:16px 18px;margin-bottom:11px;border-left:5px solid var(--teal-lt)}
+.permit.s-renew{border-left-color:var(--amber)}
+.permit.s-expiry-today,.permit.s-expired{border-left-color:var(--red)}
+.permit.s-archived{border-left-color:var(--dim);opacity:.65}
+.permit.jc{border-left-color:var(--green)}
+.permit-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.permit-no{font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--ink)}
+.permit-desc{font-size:12.5px;color:var(--dim);margin-top:3px}
+.permit-meta{display:flex;gap:20px;margin-top:13px;flex-wrap:wrap;font-size:11.5px}
+.permit-meta .k{color:var(--dim2);text-transform:uppercase;letter-spacing:.6px;font-size:9.5px;font-weight:600}
+.permit-meta .v{font-family:'JetBrains Mono';font-weight:700;margin-top:2px;font-size:12.5px}
+.pill{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:4px 10px;
+  border-radius:12px;white-space:nowrap}
+.pill.ok{background:rgba(59,178,115,.2);color:#6dd29b}
+.pill.renew{background:rgba(242,165,65,.22);color:var(--amber)}
+.pill.expiry-today,.pill.expired{background:rgba(227,66,52,.25);color:#ff857a}
+.pill.archived{background:rgba(138,163,179,.18);color:var(--dim)}
+.pill.jc{background:rgba(59,178,115,.2);color:#6dd29b}
+.renew-bar{height:6px;background:var(--bg);border-radius:4px;margin-top:12px;overflow:hidden;
+  border:1px solid var(--line)}
+.renew-bar i{display:block;height:100%;border-radius:3px;transition:.4s}
+
+/* ════════ Events ════════ */
+.ev{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--dim);
+  border-radius:7px;padding:13px 15px;margin-bottom:9px}
+.ev-top{display:flex;justify-content:space-between;gap:11px;align-items:flex-start;flex-wrap:wrap}
+.ev-cat{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:3px 9px;
+  border-radius:5px;color:#fff}
+.ev-when{font-family:'JetBrains Mono';font-size:11.5px;color:var(--accent);font-weight:600}
+.ev-text{font-size:13px;margin-top:8px;line-height:1.6;white-space:pre-wrap}
+.ev-person{font-size:11.5px;color:var(--dim);margin-top:5px}
+.ev-logged{font-size:10px;color:var(--dim2);margin-top:5px;font-family:'JetBrains Mono'}
+.filt{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.filt button{background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:10.5px;
+  font-weight:600;padding:6px 11px;border-radius:14px;cursor:pointer;font-family:'Inter';
+  text-transform:uppercase;letter-spacing:.4px;transition:.15s}
+.filt button:hover{border-color:var(--accent);color:var(--ink)}
+.filt button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ════════ Records ════════ */
+.rec{display:flex;gap:14px;padding:12px 15px;background:var(--panel);border:1px solid var(--line);
+  border-radius:7px;margin-bottom:7px}
+.rec-stamp{font-family:'JetBrains Mono';font-size:10.5px;color:var(--accent);white-space:nowrap;
+  padding-top:1px;font-weight:600}
+.rec-task{font-weight:700;font-size:13px}
+.rec-note{font-size:11.5px;color:var(--dim);margin-top:3px}
+
+/* ════════ Modal ════════ */
+.overlay{position:fixed;inset:0;background:rgba(4,8,11,.88);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal{background:linear-gradient(180deg,var(--panel),var(--panel2));border:2px solid var(--red);
+  border-radius:12px;max-width:460px;width:100%;padding:26px;
+  box-shadow:0 20px 60px rgba(227,66,52,.35), 0 0 0 1px rgba(227,66,52,.2)}
+.modal h2{font-size:16px;color:#ff8e83;text-transform:uppercase;letter-spacing:.8px;font-weight:800}
+.modal .mline{font-size:13px;line-height:1.7;margin-top:13px}
+.modal .pno{font-family:'JetBrains Mono';font-weight:700;background:var(--bg);padding:3px 8px;border-radius:5px;color:var(--accent)}
+
+@media(max-width:560px){.grid2{grid-template-columns:1fr}.wrap{padding:18px}.hdr{padding:14px 16px}.hdr-logo{height:36px}}
+
+/* ════════ v4 additions ════════ */
+.inline-add{display:flex;gap:8px}
+.inline-add input{flex:1}
+.cust-cats{margin-top:9px;font-size:11px;color:var(--dim);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cust-chip{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px 10px;
+  font-size:11px;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.cust-chip a{color:var(--red);cursor:pointer;font-weight:800;font-size:13px;line-height:1}
+.cust-chip a:hover{color:#ff857a}
+input[type=range]{accent-color:var(--accent);cursor:pointer}
+.alarm-modal{border-color:var(--red)}
+.om-list{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+.om-row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--bg);
+  border:1px solid var(--line);border-left:4px solid var(--red);border-radius:7px;padding:11px 14px}
+.om-name{font-weight:700;font-size:13.5px}
+.om-time{font-family:'JetBrains Mono';font-size:11px;color:var(--dim);margin-top:2px}
+.om-acts{display:flex;gap:7px;flex-shrink:0}
+
+</style></head><body>
+<div class="hdr"><div class="hdr-l">
+<img class="hdr-logo" alt="OQEP" src="data:image/png;base64,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">
+<div class="hdr-title"><h1>PM &amp; PTW Control Dashboard</h1>
+<div class="sub">OQEP Block 60 &mdash; Bisat Permanent Power Supply</div></div></div>
+<div class="hdr-r"><div class="clock" id="clock"></div>
+<div class="hdr-btns"><button class="btn ghost sm" id="soundBtn" onclick="toggleSound()">Sound</button></div></div></div>
+<div class="tabs">
+<button class="tab on" data-tab="today" onclick="setTab('today')">Today <span id="todayBadge"></span></button>
+<button class="tab" data-tab="reminders" onclick="setTab('reminders')">Reminders</button>
+<button class="tab" data-tab="ptw" onclick="setTab('ptw')">PTW Register <span id="ptwBadge"></span></button>
+<button class="tab" data-tab="log" onclick="setTab('log')">Shift Log &amp; Events</button>
+<button class="tab" data-tab="archive" onclick="setTab('archive')">Archive</button>
+<button class="tab" data-tab="records" onclick="setTab('records')">Records</button>
+<button class="tab" data-tab="backup" onclick="setTab('backup')">Backup &amp; Settings</button>
+</div>
+<div id="view"></div><div id="modalHost"></div><div id="alarmModalHost"></div>
+<script>
+// ═══════════════════════ Storage ═══════════════════════
+var DB = {
+  get: function (k, f) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : f; } catch (e) { return f; } },
+  set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.error(e); } }
+};
+
+// ═══════════════════════ Date helpers ═══════════════════════
+var DAY_MS = 86400000;
+var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmt(d) { return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function nowStamp() {
+  var d = new Date();
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+function nowDateInput() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function nowTimeInput() { var d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+function combineDateTime(dStr, tStr) {
+  // normalise date
+  if (!dStr || isNaN(new Date(dStr).getTime())) dStr = nowDateInput();
+  // normalise time; accept "HH:MM", "HH:MM:SS", or "HH:MM:SS AM/PM"
+  var raw = (tStr || '').trim();
+  var ampm = null;
+  var m = raw.match(/(am|pm)$/i);
+  if (m) { ampm = m[1].toLowerCase(); raw = raw.replace(/\s*(am|pm)$/i, '').trim(); }
+  var parts = raw.split(':');
+  var hh = parseInt(parts[0], 10);
+  var mm = parseInt(parts[1], 10);
+  var ss = parseInt(parts[2], 10);
+  if (isNaN(hh)) hh = new Date().getHours();
+  if (isNaN(mm)) mm = 0;
+  if (isNaN(ss)) ss = 0;
+  if (ampm === 'pm' && hh < 12) hh += 12;
+  if (ampm === 'am' && hh === 12) hh = 0;
+  hh = Math.max(0, Math.min(23, hh));
+  mm = Math.max(0, Math.min(59, mm));
+  ss = Math.max(0, Math.min(59, ss));
+  return dStr + 'T' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
+}
+function fmtDT(iso) {
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso || '\u2014');
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+function addDays(ds, n) { return new Date(new Date(ds).getTime() + n * DAY_MS).toISOString().slice(0, 10); }
+function daysBetween(a, b) { return Math.round((new Date(b).setHours(0, 0, 0, 0) - new Date(a).setHours(0, 0, 0, 0)) / DAY_MS); }
+function minutesNow() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+function timeToMin(hhmm) { var p = hhmm.split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+// ═══════════════════════ Config ═══════════════════════
+var PTW_CYCLE = 7, PTW_WARN_BEFORE = 2;
+var DEFAULT_CATEGORIES = ['Shift Handover', 'Switching Operation', 'Alarm / Trip / Protection',
+  'Equipment Defect / Abnormality', 'SAP Work Order Activity', 'PM / Maintenance Activity',
+  'Weather / Environmental Event', 'Visitor', 'Management Visit',
+  'Safety Observation / Incident / Near-Miss', 'General'];
+// custom categories the user adds, stored separately and appended
+var customCats = [];
+function allCategories() { return DEFAULT_CATEGORIES.concat(customCats); }
+var CAT_COLORS = {
+  'Shift Handover': '#3b7dd8', 'Switching Operation': '#9b6dd8',
+  'Alarm / Trip / Protection': '#d8392b', 'Equipment Defect / Abnormality': '#e8a317',
+  'SAP Work Order Activity': '#1B4D5A', 'PM / Maintenance Activity': '#2f9e5c',
+  'Weather / Environmental Event': '#5a8fa3', 'Visitor': '#7d92a3', 'Management Visit': '#E87722',
+  'Safety Observation / Incident / Near-Miss': '#d8392b', 'General': '#7d92a3'
+};
+// stable color for any category (custom ones get a hashed color)
+function catColor(cat) {
+  if (CAT_COLORS[cat]) return CAT_COLORS[cat];
+  var palette = ['#c77d2e', '#2e8b8b', '#8b5e9b', '#5a8fa3', '#a0863e', '#6d8b3b', '#9b5e5e', '#3b6d8b'];
+  var h = 0;
+  for (var i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) % 9973;
+  return palette[h % palette.length];
+}
+
+// ═══════════════════════ State ═══════════════════════
+var reminders = DB.get('ptw_reminders', []),
+  checks = DB.get('ptw_checks', {}),
+  acked = DB.get('ptw_acked', {}),
+  permits = DB.get('ptw_permits', []),
+  records = DB.get('ptw_records', []),
+  events = DB.get('ptw_events', []),
+  packs = DB.get('ptw_packs', {}),
+  missedLogged = DB.get('ptw_missed', {}),
+  soundOn = DB.get('ptw_soundOn', true);
+customCats = DB.get('ptw_customCats', []);
+var alarmVolume = DB.get('ptw_alarmVolume', 0.6);   // 0..1
+var lastAlarmSounded = 0;   // timestamp of last alarm burst
+var tab = 'today', eFilter = 'ALL', modalPermit = null;
+var editingReminderId = null, editingPermitId = null;
+// transient form state (preserved across renders)
+var rmForm = { name: '', detail: '', time: '07:30', freq: 'daily', days: [1, 2, 3, 4, 5], dom: 1 };
+var ptForm = { no: '', desc: '', loc: '', start: todayStr() };
+var evForm = { cat: DEFAULT_CATEGORIES[0], date: nowDateInput(), time: nowTimeInput(), text: '', person: '' };
+var rcForm = { task: '', note: '' };
+
+// ═══════════════════════ Reminder scheduling ═══════════════════════
+function dueToday(r) {
+  var d = new Date();
+  if (r.freq === 'daily') return true;
+  if (r.freq === 'weekly') return (r.days || []).indexOf(d.getDay()) > -1;
+  if (r.freq === 'monthly') return d.getDate() === (r.dom || 1);
+  return false;
+}
+function freqLabel(r) {
+  if (r.freq === 'daily') return 'Daily';
+  if (r.freq === 'weekly') {
+    var ds = (r.days || []).slice().sort(function (a, b) { return a - b; })
+      .map(function (i) { return WEEKDAYS[i]; });
+    return 'Weekly \u2014 ' + (ds.length ? ds.join(', ') : 'no days set');
+  }
+  if (r.freq === 'monthly') return 'Monthly \u2014 day ' + (r.dom || 1);
+  return r.freq;
+}
+function reminderState(r) {
+  var day = todayStr();
+  if ((checks[day] || []).indexOf(r.id) > -1) return 'done';
+  var diff = minutesNow() - timeToMin(r.time);
+  if (diff >= 0) {
+    return ((acked[day] || []).indexOf(r.id) > -1) ? 'due' : 'overdue';
+  }
+  if (diff >= -30) return 'due';
+  return 'upcoming';
+}
+function todaysReminders() {
+  return reminders.filter(dueToday).slice().sort(function (a, b) {
+    return timeToMin(a.time) - timeToMin(b.time);
+  });
+}
+function overdueReminders() {
+  return todaysReminders().filter(function (r) { return reminderState(r) === 'overdue'; });
+}
+
+// ═══════════════════════ Permit / record helpers ═══════════════════════
+function t() { return todayStr(); }
+function addRecord(task, note) {
+  if (!task || !String(task).trim()) return;
+  records.unshift({ id: Date.now() + Math.random(), task: task, note: note || '', stamp: nowStamp(), date: t() });
+  DB.set('ptw_records', records);
+}
+function permitState(p) {
+  if (p.status === 'archived') return { key: 'archived', days: 0 };
+  var left = daysBetween(t(), p.expiry);
+  if (left < 0) return { key: 'expired', days: left };
+  if (left === 0) return { key: 'expiry-today', days: 0 };
+  if (left <= PTW_WARN_BEFORE && !p.jobComplete) return { key: 'renew', days: left };
+  return { key: 'ok', days: left };
+}
+function activePermits() { return permits.filter(function (p) { return p.status === 'active'; }); }
+function archivedPermits() { return permits.filter(function (p) { return p.status === 'archived'; }); }
+function renewalsDue() { return activePermits().filter(function (p) { return permitState(p).key === 'renew'; }); }
+function forceDue() { return activePermits().filter(function (p) { var k = permitState(p).key; return k === 'expiry-today' || k === 'expired'; }); }
+
+// ═══════════════════════ Form state capture (prevents data loss) ═══════════════════════
+function captureForms() {
+  // pulls current input values into transient form state, called BEFORE every render
+  var g = function (id) { var el = document.getElementById(id); return el ? el.value : null; };
+  var gc = function (id) { var el = document.getElementById(id); return el ? el.checked : null; };
+
+  var n;
+  n = g('rmName'); if (n !== null) rmForm.name = n;
+  n = g('rmDetail'); if (n !== null) rmForm.detail = n;
+  n = g('rmTime'); if (n !== null) rmForm.time = n;
+  n = g('rmFreq'); if (n !== null) rmForm.freq = n;
+  n = g('rmDom'); if (n !== null) rmForm.dom = parseInt(n, 10) || 1;
+  // weekly days
+  var any = false, ds = [];
+  for (var i = 0; i < 7; i++) {
+    var cb = document.getElementById('rmDay' + i);
+    if (cb !== null && cb !== undefined) { any = true; if (cb.checked) ds.push(i); }
+  }
+  if (any) rmForm.days = ds;
+
+  n = g('pNo'); if (n !== null) ptForm.no = n;
+  n = g('pDesc'); if (n !== null) ptForm.desc = n;
+  n = g('pLoc'); if (n !== null) ptForm.loc = n;
+  n = g('pStart'); if (n !== null) ptForm.start = n;
+
+  n = g('eCat'); if (n !== null) evForm.cat = n;
+  n = g('eDate'); if (n !== null) evForm.date = n;
+  n = g('eTime'); if (n !== null) evForm.time = n;
+  n = g('eText'); if (n !== null) evForm.text = n;
+  n = g('ePerson'); if (n !== null) evForm.person = n;
+
+  n = g('rTask'); if (n !== null) rcForm.task = n;
+  n = g('rNote'); if (n !== null) rcForm.note = n;
+}
+
+// ═══════════════════════ Actions: reminders ═══════════════════════
+function setFreq(val) { captureForms(); rmForm.freq = val; render(); }
+
+function saveReminder() {
+  captureForms();
+  if (!rmForm.name.trim() || !rmForm.time) { alert('Activity name and time are required.'); return; }
+  if (rmForm.freq === 'weekly' && (!rmForm.days || !rmForm.days.length)) {
+    alert('Select at least one day for a weekly reminder.'); return;
+  }
+  if (editingReminderId) {
+    var r = reminders.filter(function (x) { return x.id === editingReminderId; })[0];
+    r.name = rmForm.name.trim(); r.detail = rmForm.detail.trim();
+    r.time = rmForm.time; r.freq = rmForm.freq;
+    r.days = rmForm.days.slice(); r.dom = rmForm.dom;
+    editingReminderId = null;
+  } else {
+    reminders.push({
+      id: 'rm' + Date.now() + Math.random().toString(36).slice(2, 6),
+      name: rmForm.name.trim(), detail: rmForm.detail.trim(), time: rmForm.time,
+      freq: rmForm.freq, days: rmForm.days.slice(), dom: rmForm.dom, created: t()
+    });
+  }
+  DB.set('ptw_reminders', reminders);
+  // reset form
+  rmForm = { name: '', detail: '', time: '07:30', freq: 'daily', days: [1, 2, 3, 4, 5], dom: 1 };
+  render();
+}
+function editReminder(id) {
+  var r = reminders.filter(function (x) { return x.id === id; })[0];
+  if (!r) return;
+  editingReminderId = id;
+  rmForm = {
+    name: r.name, detail: r.detail || '', time: r.time, freq: r.freq,
+    days: (r.days || []).slice(), dom: r.dom || 1
+  };
+  tab = 'reminders'; render();
+}
+function cancelEditReminder() {
+  editingReminderId = null;
+  rmForm = { name: '', detail: '', time: '07:30', freq: 'daily', days: [1, 2, 3, 4, 5], dom: 1 };
+  render();
+}
+function deleteReminder(id) {
+  if (!confirm('Delete this reminder?')) return;
+  reminders = reminders.filter(function (x) { return x.id !== id; });
+  DB.set('ptw_reminders', reminders);
+  render();
+}
+function toggleCheck(id) {
+  var day = t(); var arr = checks[day] || [];
+  var has = arr.indexOf(id) > -1;
+  checks[day] = has ? arr.filter(function (x) { return x !== id; }) : arr.concat([id]);
+  DB.set('ptw_checks', checks);
+  if (!has) {
+    var r = reminders.filter(function (x) { return x.id === id; })[0];
+    if (r) {
+      var st = minutesNow() - timeToMin(r.time);
+      addRecord(r.name + ' \u2014 completed',
+        st > 0 ? ('Done ' + st + ' min after scheduled ' + r.time) : ('Done on time (' + r.time + ')'));
+    }
+  }
+  render();
+}
+function ackOverdue(id) {
+  var day = t(); var arr = acked[day] || [];
+  if (arr.indexOf(id) < 0) { acked[day] = arr.concat([id]); DB.set('ptw_acked', acked); }
+  var r = reminders.filter(function (x) { return x.id === id; })[0];
+  if (r) addRecord(r.name + ' \u2014 overdue acknowledged',
+    'Scheduled ' + r.time + ', acknowledged late at ' + nowStamp());
+  render();
+}
+
+// ═══════════════════════ Actions: permits ═══════════════════════
+function savePermit() {
+  captureForms();
+  if (!ptForm.no.trim() || !ptForm.start) { alert('Permit number and start date are required.'); return; }
+  if (editingPermitId) {
+    var p = permits.filter(function (x) { return x.id === editingPermitId; })[0];
+    var oldNo = p.no, oldStart = p.start;
+    p.no = ptForm.no.trim(); p.desc = ptForm.desc.trim();
+    p.loc = ptForm.loc.trim(); p.start = ptForm.start;
+    p.expiry = addDays(p.start, PTW_CYCLE);
+    addRecord('PTW ' + p.no + ' edited',
+      'Updated permit details' + (oldNo !== p.no ? ' (was ' + oldNo + ')' : '') +
+      (oldStart !== p.start ? ', start changed ' + oldStart + ' \u2192 ' + p.start : ''));
+    editingPermitId = null;
+  } else {
+    permits.unshift({
+      id: Date.now(), no: ptForm.no.trim(), desc: ptForm.desc.trim(),
+      loc: ptForm.loc.trim(), start: ptForm.start,
+      expiry: addDays(ptForm.start, PTW_CYCLE), status: 'active', jobComplete: false
+    });
+    addRecord('PTW ' + ptForm.no.trim() + ' issued', 'New permit logged');
+  }
+  DB.set('ptw_permits', permits);
+  ptForm = { no: '', desc: '', loc: '', start: todayStr() };
+  render();
+}
+function editPermit(id) {
+  var p = permits.filter(function (x) { return x.id === id; })[0];
+  if (!p) return;
+  editingPermitId = id;
+  ptForm = { no: p.no, desc: p.desc || '', loc: p.loc || '', start: p.start };
+  render();
+}
+function cancelEditPermit() {
+  editingPermitId = null;
+  ptForm = { no: '', desc: '', loc: '', start: todayStr() };
+  render();
+}
+function markJobComplete(id) {
+  var p = permits.filter(function (x) { return x.id === id; })[0];
+  var was = p.jobComplete; p.jobComplete = !p.jobComplete;
+  DB.set('ptw_permits', permits);
+  if (!was) addRecord('PTW ' + p.no + ' \u2014 job marked complete', 'Renewal reminder stopped');
+  render();
+}
+function cancelPermit(id) {
+  var p = permits.filter(function (x) { return x.id === id; })[0];
+  p.status = 'archived'; p.closedOn = t();
+  DB.set('ptw_permits', permits);
+  addRecord('PTW ' + p.no + ' cancelled', 'Moved to 5-year archive');
+  modalPermit = null; render();
+}
+function deletePermit(id) {
+  if (!confirm('Delete this permit permanently?')) return;
+  permits = permits.filter(function (x) { return x.id !== id; });
+  DB.set('ptw_permits', permits); render();
+}
+function snoozeForce(id) {
+  var p = permits.filter(function (x) { return x.id === id; })[0];
+  packs[p.id] = t(); DB.set('ptw_packs', packs);
+  addRecord('PTW ' + p.no + ' \u2014 Day-7 cancellation acknowledged (NOT cancelled)',
+    'Acknowledged without cancelling \u2014 action still outstanding');
+  modalPermit = null; render();
+}
+
+// ═══════════════════════ Actions: events / records ═══════════════════════
+function addEvent() {
+  // read directly from the DOM at click time (most reliable)
+  var get = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  var cat = get('eCat') || evForm.cat || DEFAULT_CATEGORIES[0];
+  var date = get('eDate') || nowDateInput();
+  var time = get('eTime') || nowTimeInput();
+  var text = (get('eText') || '').trim();
+  var person = (get('ePerson') || '').trim();
+
+  if (!text) { alert('Please type something in Entry Details before recording.'); return; }
+
+  var iso = combineDateTime(date, time);
+  events.unshift({
+    id: Date.now() + Math.random(), cat: cat, when: iso,
+    text: text, person: person, logged: nowStamp()
+  });
+  DB.set('ptw_events', events);
+
+  // reset form fields but keep chosen category
+  evForm = { cat: cat, date: nowDateInput(), time: nowTimeInput(), text: '', person: '' };
+  // IMPORTANT: reset the filter to ALL so the new entry is always visible
+  eFilter = 'ALL';
+  render();
+}
+function deleteEvent(id) {
+  events = events.filter(function (e) { return e.id !== id; });
+  DB.set('ptw_events', events); render();
+}
+function addRec() {
+  captureForms();
+  if (!rcForm.task.trim()) { alert('Task / activity is required.'); return; }
+  addRecord(rcForm.task.trim(), rcForm.note.trim());
+  rcForm = { task: '', note: '' };
+  render();
+}
+function setFilter(c) { eFilter = c; render(); }
+
+// ─── custom category management ───
+function addCustomCategory() {
+  var el = document.getElementById('newCat');
+  var name = el ? el.value.trim() : '';
+  if (!name) { alert('Type a category name first.'); return; }
+  if (allCategories().indexOf(name) > -1) { alert('That category already exists.'); return; }
+  customCats.push(name);
+  DB.set('ptw_customCats', customCats);
+  evForm.cat = name; // select it immediately
+  render();
+}
+function deleteCustomCategory(name) {
+  if (!confirm('Remove custom category "' + name + '"? Existing entries keep their label.')) return;
+  customCats = customCats.filter(function (c) { return c !== name; });
+  DB.set('ptw_customCats', customCats);
+  if (evForm.cat === name) evForm.cat = DEFAULT_CATEGORIES[0];
+  render();
+}
+
+// ═══════════════════════ Alarm engine ═══════════════════════
+var audioCtx = null;
+function getCtx() {
+  try {
+    if (!audioCtx) { var C = window.AudioContext || window.webkitAudioContext; if (C) audioCtx = new C(); }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  } catch (e) { return null; }
+}
+// a 3-second attention-grabbing siren pattern (rising/falling tones)
+function playAlarmBurst() {
+  var ctx = getCtx();
+  if (!ctx) return;
+  var vol = Math.max(0, Math.min(1, alarmVolume));
+  if (vol <= 0) return;
+  var now = ctx.currentTime;
+  // 6 tone sweeps over ~3s
+  for (var i = 0; i < 6; i++) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sawtooth';
+    var startT = now + i * 0.5;
+    o.frequency.setValueAtTime(660, startT);
+    o.frequency.linearRampToValueAtTime(1180, startT + 0.25);
+    o.frequency.linearRampToValueAtTime(660, startT + 0.48);
+    g.gain.setValueAtTime(0.0001, startT);
+    g.gain.exponentialRampToValueAtTime(vol, startT + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, startT + 0.47);
+    o.start(startT); o.stop(startT + 0.5);
+  }
+}
+function testAlarm() { playAlarmBurst(); }
+
+function setVolume(v) {
+  alarmVolume = parseFloat(v); DB.set('ptw_alarmVolume', alarmVolume);
+  var lbl = document.getElementById('volLabel');
+  if (lbl) lbl.textContent = Math.round(alarmVolume * 100) + '%';
+}
+function toggleSound() {
+  soundOn = !soundOn; DB.set('ptw_soundOn', soundOn); render();
+}
+function requestNotifyPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+function fireNotification(title, body) {
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body: body, requireInteraction: true });
+    }
+  } catch (e) { }
+}
+
+// flashing browser tab title
+var baseTitle = 'PM & PTW Dashboard';
+var titleFlip = false;
+function updateTabTitle(overdueCount) {
+  try {
+    if (overdueCount > 0) {
+      titleFlip = !titleFlip;
+      document.title = titleFlip ? ('\u26A0 ' + overdueCount + ' OVERDUE') : baseTitle;
+    } else {
+      document.title = baseTitle;
+    }
+  } catch (e) { }
+}
+
+// in-page takeover modal for overdue (separate from permit modal)
+var overdueModalDismissed = {};  // id -> minute-key, so it can re-show after dismiss
+function renderOverdueModal(od) {
+  var host = document.getElementById('alarmModalHost');
+  if (!host) return;
+  // show only if there is at least one overdue not dismissed this cycle
+  var nowKey = Math.floor(Date.now() / 300000); // 5-min window
+  var show = od.filter(function (r) { return overdueModalDismissed[r.id] !== nowKey; });
+  if (modalPermit) { host.innerHTML = ''; return; } // don't stack on permit modal
+  if (!show.length) { host.innerHTML = ''; return; }
+  var rows = show.map(function (r) {
+    return '<div class="om-row"><div><div class="om-name">' + esc(r.name) + '</div>' +
+      '<div class="om-time">Scheduled ' + r.time + '</div></div>' +
+      '<div class="om-acts">' +
+      '<button class="btn sm green" onclick="toggleCheck(\'' + r.id + '\')">Done</button>' +
+      '<button class="btn sm ghost" onclick="ackOverdue(\'' + r.id + '\')">Later</button>' +
+      '</div></div>';
+  }).join('');
+  host.innerHTML = '<div class="overlay"><div class="modal alarm-modal">' +
+    '<h2>\u{1F6A8} ' + show.length + ' Activity' + (show.length > 1 ? '-ies' : '') + ' Overdue</h2>' +
+    '<div class="mline">These scheduled activities are not yet actioned:</div>' +
+    '<div class="om-list">' + rows + '</div>' +
+    '<div class="actions" style="margin-top:16px">' +
+    '<button class="btn ghost" onclick="dismissOverdueModal()">Dismiss for now</button></div>' +
+    '<div class="note">Dismissing silences the pop-up briefly; it returns in 5 minutes if still not actioned. ' +
+    'The tab title and alarm continue until you mark Done or Acknowledge.</div>' +
+    '</div></div>';
+}
+function dismissOverdueModal() {
+  var nowKey = Math.floor(Date.now() / 300000);
+  overdueReminders().forEach(function (r) { overdueModalDismissed[r.id] = nowKey; });
+  var host = document.getElementById('alarmModalHost');
+  if (host) host.innerHTML = '';
+}
+
+var loggedMissedNotif = {};
+function alarmTick() {
+  var od = overdueReminders();
+  var day = todayStr();
+  var ml = missedLogged[day] || [];
+  od.forEach(function (r) {
+    if (ml.indexOf(r.id) < 0) {
+      ml.push(r.id);
+      addRecord(r.name + ' \u2014 OVERDUE / not actioned',
+        'Scheduled ' + r.time + ', still not completed \u2014 flagged ' + nowStamp());
+    }
+  });
+  missedLogged[day] = ml; DB.set('ptw_missed', missedLogged);
+
+  updateTabTitle(od.length);
+
+  if (od.length > 0) {
+    document.body.classList.add('alarm-on');
+    // SOUND: short burst every 5 minutes (300000 ms)
+    var nowMs = Date.now();
+    if (soundOn && (nowMs - lastAlarmSounded >= 300000 || lastAlarmSounded === 0)) {
+      playAlarmBurst();
+      lastAlarmSounded = nowMs;
+      // browser notification fires together with the burst
+      od.forEach(function (r) {
+        var k = Math.floor(nowMs / 300000);
+        if (loggedMissedNotif[r.id] !== k) {
+          loggedMissedNotif[r.id] = k;
+          fireNotification('\u26A0 Overdue: ' + r.name, 'Scheduled ' + r.time + ' \u2014 not yet actioned.');
+        }
+      });
+    }
+    renderOverdueModal(od);
+  } else {
+    document.body.classList.remove('alarm-on');
+    lastAlarmSounded = 0;
+    var host = document.getElementById('alarmModalHost');
+    if (host) host.innerHTML = '';
+  }
+}
+
+// ═══════════════════════ ICS export ═══════════════════════
+function pad2(n) { return String(n).padStart(2, '0'); }
+function icsDate(d) { return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
+function buildICS() {
+  var lines = [];
+  lines.push('BEGIN:VCALENDAR');
+  lines.push('VERSION:2.0');
+  lines.push('PRODID:-//Bisat Substation//PM-PTW Dashboard//EN');
+  lines.push('CALSCALE:GREGORIAN');
+  var ICS_DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+  var now = new Date();
+  var stamp = now.getFullYear() + pad2(now.getMonth() + 1) + pad2(now.getDate()) +
+    'T' + pad2(now.getHours()) + pad2(now.getMinutes()) + '00';
+  reminders.forEach(function (r, idx) {
+    var hh = r.time.split(':')[0], mm = r.time.split(':')[1];
+    var start = new Date();
+    start.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
+    var dt = icsDate(start) + 'T' + pad2(hh) + pad2(mm) + '00';
+    var rrule = '';
+    if (r.freq === 'daily') rrule = 'RRULE:FREQ=DAILY';
+    else if (r.freq === 'weekly') {
+      var dd = (r.days || []).map(function (i) { return ICS_DAYS[i]; }).join(',');
+      rrule = 'RRULE:FREQ=WEEKLY;BYDAY=' + dd;
+    } else if (r.freq === 'monthly') {
+      rrule = 'RRULE:FREQ=MONTHLY;BYMONTHDAY=' + (r.dom || 1);
+    }
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:bisat-' + r.id + '-' + idx + '@bisat.local');
+    lines.push('DTSTAMP:' + stamp);
+    lines.push('DTSTART:' + dt);
+    lines.push('DURATION:PT15M');
+    lines.push('SUMMARY:' + (r.name || 'Reminder').replace(/[,;\\]/g, ' '));
+    if (r.detail) lines.push('DESCRIPTION:' + r.detail.replace(/[,;\\]/g, ' ').replace(/\n/g, ' '));
+    if (rrule) lines.push(rrule);
+    lines.push('BEGIN:VALARM');
+    lines.push('TRIGGER:PT0M');
+    lines.push('ACTION:DISPLAY');
+    lines.push('DESCRIPTION:' + (r.name || 'Reminder'));
+    lines.push('END:VALARM');
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function exportICS() {
+  if (!reminders.length) { alert('Add at least one reminder first.'); return; }
+  var blob = new Blob([buildICS()], { type: 'text/calendar' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Bisat_Reminders_' + t() + '.ics';
+  a.click();
+}
+
+// ═══════════════════════ Backup / Restore ═══════════════════════
+function exportBackup() {
+  var data = {
+    version: 3,
+    exportedAt: new Date().toISOString(),
+    reminders: reminders, checks: checks, acked: acked,
+    permits: permits, records: records, events: events,
+    packs: packs, missedLogged: missedLogged, soundOn: soundOn,
+    customCats: customCats, alarmVolume: alarmVolume
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Bisat_Dashboard_Backup_' + t() + '.json';
+  a.click();
+}
+function mergeArray(local, incoming, idKey) {
+  var byId = {};
+  local.forEach(function (x) { byId[x[idKey]] = x; });
+  (incoming || []).forEach(function (x) { byId[x[idKey]] = x; });
+  var out = [];
+  for (var k in byId) if (byId.hasOwnProperty(k)) out.push(byId[k]);
+  return out;
+}
+function mergeIdMap(local, incoming) {
+  var out = {};
+  for (var k in local) if (local.hasOwnProperty(k)) out[k] = (local[k] || []).slice();
+  for (var k2 in incoming) if (incoming.hasOwnProperty(k2)) {
+    var arr = out[k2] || [];
+    (incoming[k2] || []).forEach(function (id) { if (arr.indexOf(id) < 0) arr.push(id); });
+    out[k2] = arr;
+  }
+  return out;
+}
+function doRestore(mode) {
+  var input = document.getElementById('restoreFile');
+  if (!input || !input.files || !input.files[0]) { alert('Choose a backup .json file first.'); return; }
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var data;
+    try { data = JSON.parse(e.target.result); }
+    catch (err) { alert('That file is not a valid backup. Error: ' + err.message); return; }
+    if (mode === 'replace') {
+      if (!confirm('REPLACE all current data with the backup file? This cannot be undone.')) return;
+      reminders = data.reminders || [];
+      checks = data.checks || {}; acked = data.acked || {};
+      permits = data.permits || []; records = data.records || [];
+      events = data.events || []; packs = data.packs || {};
+      missedLogged = data.missedLogged || {};
+      if (typeof data.soundOn === 'boolean') soundOn = data.soundOn;
+      customCats = data.customCats || [];
+      if (typeof data.alarmVolume === 'number') alarmVolume = data.alarmVolume;
+    } else {
+      // merge
+      reminders = mergeArray(reminders, data.reminders, 'id');
+      permits = mergeArray(permits, data.permits, 'id');
+      records = mergeArray(records, data.records, 'id');
+      events = mergeArray(events, data.events, 'id');
+      checks = mergeIdMap(checks, data.checks);
+      acked = mergeIdMap(acked, data.acked);
+      missedLogged = mergeIdMap(missedLogged, data.missedLogged);
+      // packs: keep newer
+      for (var k in (data.packs || {})) if (data.packs.hasOwnProperty(k)) packs[k] = data.packs[k];
+      // merge custom categories (union)
+      (data.customCats || []).forEach(function (c) { if (customCats.indexOf(c) < 0) customCats.push(c); });
+    }
+    DB.set('ptw_reminders', reminders); DB.set('ptw_checks', checks); DB.set('ptw_acked', acked);
+    DB.set('ptw_permits', permits); DB.set('ptw_records', records); DB.set('ptw_events', events);
+    DB.set('ptw_packs', packs); DB.set('ptw_missed', missedLogged); DB.set('ptw_soundOn', soundOn);
+    DB.set('ptw_customCats', customCats); DB.set('ptw_alarmVolume', alarmVolume);
+    alert('Restore complete. Mode: ' + mode.toUpperCase());
+    render();
+  };
+  reader.readAsText(input.files[0]);
+}
+function exportAll() {
+  var L = [];
+  L.push('OQEP BLOCK 60 \u2014 BISAT SUBSTATION');
+  L.push('PM / PTW CONTROL DASHBOARD \u2014 DATA EXPORT');
+  L.push('Generated: ' + nowStamp()); L.push('');
+  L.push('=== REMINDERS ===');
+  reminders.forEach(function (r) { L.push(r.time + ' | ' + r.name + ' | ' + freqLabel(r)); });
+  L.push(''); L.push('=== ACTIVE PERMITS ===');
+  activePermits().forEach(function (p) { L.push(p.no + ' | ' + p.desc + ' | ' + p.loc + ' | Start ' + fmt(p.start) + ' | Expiry ' + fmt(p.expiry) + ' | JobComplete:' + (p.jobComplete ? 'Y' : 'N')); });
+  L.push(''); L.push('=== ARCHIVED PERMITS ===');
+  archivedPermits().forEach(function (p) { L.push(p.no + ' | ' + p.desc + ' | ' + p.loc + ' | Start ' + fmt(p.start) + ' | Cancelled ' + (p.closedOn ? fmt(p.closedOn) : '-')); });
+  L.push(''); L.push('=== SHIFT LOG & EVENT REGISTER ===');
+  events.slice().sort(function (a, b) { return new Date(b.when) - new Date(a.when); }).forEach(function (e) { L.push(fmtDT(e.when) + ' | ' + e.cat + ' | ' + (e.person || '-') + ' | ' + e.text); });
+  L.push(''); L.push('=== COMPLETION RECORDS ===');
+  records.forEach(function (r) { L.push(r.stamp + ' | ' + r.task + ' | ' + (r.note || '')); });
+  var blob = new Blob([L.join('\n')], { type: 'text/plain' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Bisat_PTW_Log_Export_' + t() + '.txt';
+  a.click();
+}
+
+// ═══════════════════════ Render ═══════════════════════
+function setTab(x) {
+  captureForms();
+  tab = x;
+  if (x !== 'reminders') { editingReminderId = null; }
+  if (x !== 'ptw') { editingPermitId = null; }
+  render();
+}
+
+function render() {
+  // do NOT call captureForms here - render is called AFTER actions
+  try {
+    var clk = document.getElementById('clock');
+    var d = new Date();
+    if (clk) clk.textContent = d.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) +
+      '   ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].className = 'tab' + (tabs[i].dataset.tab === tab ? ' on' : '');
+
+    var od = overdueReminders().length;
+    var tb = document.getElementById('todayBadge');
+    if (tb) tb.innerHTML = od > 0 ? '<span class="badge">' + od + '</span>' : '';
+    var nP = renewalsDue().length + forceDue().length;
+    var pb = document.getElementById('ptwBadge');
+    if (pb) pb.innerHTML = nP > 0 ? '<span class="badge">' + nP + '</span>' : '';
+
+    var soundBtn = document.getElementById('soundBtn');
+    if (soundBtn) soundBtn.textContent = soundOn ? '\u{1F50A} Sound ON' : '\u{1F507} Sound OFF';
+
+    var v = document.getElementById('view'), h = '';
+    if (tab === 'today') h = viewToday();
+    else if (tab === 'reminders') h = viewReminders();
+    else if (tab === 'ptw') h = viewPTW();
+    else if (tab === 'log') h = viewLog();
+    else if (tab === 'archive') h = viewArchive();
+    else if (tab === 'records') h = viewRecords();
+    else if (tab === 'backup') h = viewBackup();
+    if (v) v.innerHTML = h;
+
+    var due = forceDue().filter(function (p) { return packs[p.id] !== t(); });
+    if (!modalPermit && due.length > 0) modalPermit = due[0];
+    renderModal();
+  } catch (err) {
+    console.error('render error:', err);
+  }
+}
+
+// ═══════════════════════ Views ═══════════════════════
+function viewToday() {
+  var h = '<div class="wrap">';
+  var od = overdueReminders();
+  var tr = todaysReminders();
+
+  if (od.length > 0) {
+    h += '<div class="alarm-banner"><div class="ab-top">\u{1F6A8} ' + od.length +
+      ' ACTIVITY' + (od.length > 1 ? '-IES' : '') + ' OVERDUE \u2014 ACTION REQUIRED</div>' +
+      '<div class="ab-sub">Tick them done, or acknowledge below. The alarm continues until you respond.</div></div>';
+  }
+
+  var rd = renewalsDue(), fd = forceDue();
+  if (rd.length || fd.length) {
+    h += '<div class="warn-banner"><div class="wt">\u26A0 Permit action required</div><div class="wl">';
+    if (fd.length) h += '<div><strong>' + fd.length + '</strong> permit' + (fd.length > 1 ? 's' : '') + ' at Day 7 \u2014 cancellation mandatory today.</div>';
+    if (rd.length) h += '<div><strong>' + rd.length + '</strong> permit' + (rd.length > 1 ? 's' : '') + ' at Day 5 \u2014 apply for renewal if job continues.</div>';
+    h += 'See <strong>PTW Register</strong>.</div></div>';
+  }
+
+  h += '<div class="secttl">Today\u2019s Activities (' + tr.length + ')</div>';
+  if (!tr.length) {
+    h += '<p class="empty">No activities scheduled for today.<br>Go to <strong>Reminders</strong> to add some.</p>';
+  }
+  tr.forEach(function (r) {
+    var st = reminderState(r);
+    var done = st === 'done';
+    var cls = 'task st-' + st;
+    var tag = st === 'done' ? '<span class="t-pill done">Done</span>'
+      : st === 'overdue' ? '<span class="t-pill overdue">Overdue</span>'
+        : st === 'due' ? '<span class="t-pill due">Due now</span>'
+          : '<span class="t-pill up">Upcoming</span>';
+    h += '<div class="' + cls + '">' +
+      '<div class="cbox" onclick="toggleCheck(\'' + r.id + '\')">' + (done ? '\u2713' : '') + '</div>' +
+      '<div class="t-body">' +
+      '<div class="t-row"><span class="t-time">' + r.time + '</span>' +
+      '<span class="t-name">' + esc(r.name) + '</span>' + tag + '</div>' +
+      (r.detail ? '<div class="t-detail">' + esc(r.detail) + '</div>' : '') +
+      '<div class="t-freq">' + freqLabel(r) + '</div>';
+    if (st === 'overdue') {
+      h += '<div class="t-actions">' +
+        '<button class="btn sm green" onclick="toggleCheck(\'' + r.id + '\')">Mark Done</button>' +
+        '<button class="btn sm ghost" onclick="ackOverdue(\'' + r.id + '\')">Acknowledge (action later)</button>' +
+        '</div>';
+    }
+    h += '</div></div>';
+  });
+
+  h += '<div class="note">Activities reset every day. Completed and overdue items log automatically to ' +
+    '<strong>Records</strong>. Live alarm works only while dashboard is open \u2014 use ' +
+    '<strong>Reminders \u2192 Export Calendar (.ics)</strong> for background alerts.</div></div>';
+  return h;
+}
+
+function viewReminders() {
+  var editing = !!editingReminderId;
+  var h = '<div class="wrap"><div class="panel"><h3>' +
+    (editing ? 'Edit activity' : 'Add a new activity / reminder') + '</h3>' +
+    '<div class="field"><label>Activity Name</label>' +
+    '<input id="rmName" value="' + esc(rmForm.name) + '" placeholder="e.g. Validate PM schedule"></div>' +
+    '<div class="field"><label>Detail / Note (optional)</label>' +
+    '<input id="rmDetail" value="' + esc(rmForm.detail) + '" placeholder="What needs to be done"></div>' +
+    '<div class="grid2">' +
+    '<div class="field"><label>Time</label><input type="time" id="rmTime" value="' + rmForm.time + '"></div>' +
+    '<div class="field"><label>Frequency</label><select id="rmFreq" onchange="setFreq(this.value)">' +
+    '<option value="daily"' + (rmForm.freq === 'daily' ? ' selected' : '') + '>Daily</option>' +
+    '<option value="weekly"' + (rmForm.freq === 'weekly' ? ' selected' : '') + '>Weekly (choose days)</option>' +
+    '<option value="monthly"' + (rmForm.freq === 'monthly' ? ' selected' : '') + '>Monthly (choose date)</option>' +
+    '</select></div></div>';
+
+  if (rmForm.freq === 'weekly') {
+    h += '<div class="field"><label>Days of week</label><div class="daypick">';
+    for (var i = 0; i < 7; i++) {
+      var on = (rmForm.days || []).indexOf(i) > -1;
+      h += '<label class="daybox"><input type="checkbox" id="rmDay' + i + '"' + (on ? ' checked' : '') + '>' +
+        WEEKDAYS[i] + '</label>';
+    }
+    h += '</div><div class="hint">Tip: for a 5-day work pattern tick Mon\u2013Fri. For custom (e.g. Sat/Sun/Wed) tick exactly those.</div></div>';
+  }
+  if (rmForm.freq === 'monthly') {
+    h += '<div class="field"><label>Day of month</label><select id="rmDom">';
+    for (var dn = 1; dn <= 28; dn++) {
+      h += '<option value="' + dn + '"' + (rmForm.dom === dn ? ' selected' : '') + '>' + dn + '</option>';
+    }
+    h += '</select><div class="hint">Days 1\u201328 to ensure it fires every month including February.</div></div>';
+  }
+
+  h += '<div class="actions">' +
+    '<button class="btn" onclick="saveReminder()">' + (editing ? 'Save Changes' : '+ Add Activity') + '</button>' +
+    (editing ? '<button class="btn ghost" onclick="cancelEditReminder()">Cancel Edit</button>' : '') +
+    '</div></div>';
+
+  h += '<div class="panel"><h3>Background reminders \u2014 calendar file</h3>' +
+    '<p class="muted">Dashboard alarms work only when open. Export this calendar file and open it to import ' +
+    'all reminders into Windows Calendar or Outlook \u2014 they fire background pop-ups even with Chrome closed. ' +
+    'Re-export whenever you change your reminders.</p>' +
+    '<button class="btn" onclick="exportICS()">\u{1F4C5} Export Calendar (.ics)</button></div>';
+
+  var rl = reminders.slice().sort(function (a, b) { return timeToMin(a.time) - timeToMin(b.time); });
+  h += '<div class="secttl">All Reminders (' + rl.length + ')</div>';
+  if (!rl.length) h += '<p class="empty">No reminders yet. Add your first activity above.</p>';
+  rl.forEach(function (r) {
+    h += '<div class="rm-card">' +
+      '<div class="rm-left"><div class="rm-time">' + r.time + '</div></div>' +
+      '<div class="rm-mid"><div class="rm-name">' + esc(r.name) + '</div>' +
+      (r.detail ? '<div class="rm-detail">' + esc(r.detail) + '</div>' : '') +
+      '<div class="rm-freq">' + freqLabel(r) + '</div></div>' +
+      '<div class="rm-act">' +
+      '<button class="btn sm ghost" onclick="editReminder(\'' + r.id + '\')">Edit</button>' +
+      '<button class="btn sm ghost" onclick="deleteReminder(\'' + r.id + '\')">Delete</button>' +
+      '</div></div>';
+  });
+  return h + '</div>';
+}
+
+function viewPTW() {
+  var editing = !!editingPermitId;
+  var h = '<div class="wrap"><div class="panel"><h3>' +
+    (editing ? 'Edit permit' : 'Apply / issue a new permit') + '</h3>' +
+    '<div class="grid2">' +
+    '<div class="field"><label>Permit Number</label><input id="pNo" value="' + esc(ptForm.no) + '" placeholder="PTW-2026-..."></div>' +
+    '<div class="field"><label>Start Date</label><input type="date" id="pStart" value="' + ptForm.start + '"></div>' +
+    '</div>' +
+    '<div class="field"><label>Work Description</label><input id="pDesc" value="' + esc(ptForm.desc) + '" placeholder="e.g. 33kV feeder maintenance"></div>' +
+    '<div class="field"><label>Location / Tag</label><input id="pLoc" value="' + esc(ptForm.loc) + '" placeholder="e.g. BPPS 132kV GIS"></div>' +
+    '<div class="actions">' +
+    '<button class="btn" onclick="savePermit()">' + (editing ? 'Save Changes' : '+ Issue Permit (' + PTW_CYCLE + '-day cycle)') + '</button>' +
+    (editing ? '<button class="btn ghost" onclick="cancelEditPermit()">Cancel Edit</button>' : '') +
+    '</div>' +
+    '<div class="note">Expiry auto-set ' + PTW_CYCLE + ' days from start. Day ' + (PTW_CYCLE - PTW_WARN_BEFORE) +
+    ': renewal prompt. Day ' + PTW_CYCLE + ': mandatory cancellation.</div></div>';
+
+  var ap = activePermits();
+  h += '<div class="secttl">Active Permits (' + ap.length + ')</div>';
+  if (!ap.length) h += '<p class="empty">No active permits.</p>';
+  ap.forEach(function (p) {
+    var st = permitState(p);
+    var pct = Math.max(0, Math.min(100, (st.days / PTW_CYCLE) * 100));
+    var bar = st.key === 'ok' ? 'var(--green)' : st.key === 'renew' ? 'var(--amber)' : 'var(--red)';
+    var label = st.key === 'ok' ? (st.days + ' day' + (st.days !== 1 ? 's' : '') + ' left') :
+      st.key === 'renew' ? ('Day 5 \u2014 renew now (' + st.days + ' left)') :
+        st.key === 'expiry-today' ? 'Day 7 \u2014 cancel today' :
+          ('Expired ' + Math.abs(st.days) + 'd ago \u2014 cancel now');
+    h += '<div class="permit s-' + st.key + (p.jobComplete ? ' jc' : '') + '">' +
+      '<div class="permit-top"><div><div class="permit-no">' + esc(p.no) + '</div>' +
+      (p.desc ? '<div class="permit-desc">' + esc(p.desc) + '</div>' : '') + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      (p.jobComplete ? '<span class="pill jc">Job Complete</span>' : '') +
+      '<span class="pill ' + st.key + '">' + label + '</span></div></div>' +
+      '<div class="permit-meta">' +
+      (p.loc ? '<div><div class="k">Location</div><div class="v">' + esc(p.loc) + '</div></div>' : '') +
+      '<div><div class="k">Start</div><div class="v">' + fmt(p.start) + '</div></div>' +
+      '<div><div class="k">Expiry (Day 7)</div><div class="v">' + fmt(p.expiry) + '</div></div>' +
+      '<div><div class="k">Renew By (Day 5)</div><div class="v">' + fmt(addDays(p.expiry, -PTW_WARN_BEFORE)) + '</div></div>' +
+      '</div><div class="renew-bar"><i style="width:' + pct + '%;background:' + bar + '"></i></div>' +
+      '<div class="actions">' +
+      '<button class="btn sm ghost" onclick="editPermit(' + p.id + ')">Edit</button>' +
+      '<button class="btn sm ' + (p.jobComplete ? 'ghost' : 'green') + '" onclick="markJobComplete(' + p.id + ')">' +
+      (p.jobComplete ? 'Reopen Job' : 'Mark Job Complete') + '</button>' +
+      '<button class="btn sm red" onclick="cancelPermit(' + p.id + ')">Cancel \u2192 Archive</button>' +
+      '<button class="btn sm ghost danger" onclick="deletePermit(' + p.id + ')">Delete</button>' +
+      '</div></div>';
+  });
+  return h + '</div>';
+}
+
+function viewLog() {
+  var cats = allCategories();
+  var h = '<div class="wrap"><div class="panel"><h3>New shift log / event entry</h3>' +
+    '<div class="grid2">' +
+    '<div class="field"><label>Category</label><select id="eCat">';
+  cats.forEach(function (c) {
+    h += '<option' + (c === evForm.cat ? ' selected' : '') + '>' + esc(c) + '</option>';
+  });
+  h += '</select></div>' +
+    '<div class="field"><label>Person / Operator (optional)</label>' +
+    '<input id="ePerson" value="' + esc(evForm.person) + '" placeholder="Name, designation, company"></div></div>' +
+    // add-custom-category row
+    '<div class="field"><label>Add a new category (saved for one-click reuse)</label>' +
+    '<div class="inline-add">' +
+    '<input id="newCat" placeholder="e.g. Battery Bank Inspection">' +
+    '<button class="btn sm" onclick="addCustomCategory()">+ Add</button></div>';
+  if (customCats.length) {
+    h += '<div class="cust-cats">Custom: ';
+    customCats.forEach(function (c) {
+      h += '<span class="cust-chip">' + esc(c) +
+        ' <a onclick="deleteCustomCategory(\'' + c.replace(/'/g, "\\'") + '\')">\u00D7</a></span>';
+    });
+    h += '</div>';
+  }
+  h += '</div>' +
+    '<div class="grid2">' +
+    '<div class="field"><label>Date</label><input type="date" id="eDate" value="' + evForm.date + '"></div>' +
+    '<div class="field"><label>Time (HH:MM:SS)</label><input type="time" step="1" id="eTime" value="' + evForm.time + '"></div>' +
+    '</div>' +
+    '<div class="field"><label>Entry Details</label>' +
+    '<textarea id="eText" rows="3" placeholder="Describe the activity, visit, alarm, abnormality...">' + esc(evForm.text) + '</textarea></div>' +
+    '<button class="btn" onclick="addEvent()">+ Record Entry</button></div>';
+
+  h += '<div class="filt"><button class="' + (eFilter === 'ALL' ? 'on' : '') + '" onclick="setFilter(\'ALL\')">All</button>';
+  cats.forEach(function (c, idx) {
+    h += '<button class="' + (eFilter === c ? 'on' : '') + '" onclick="setFilter(allCategories()[' + idx + '])">' + esc(c) + '</button>';
+  });
+  h += '</div>';
+
+  var fe = events.slice().sort(function (a, b) { return new Date(b.when) - new Date(a.when); })
+    .filter(function (e) { return eFilter === 'ALL' || e.cat === eFilter; });
+  h += '<div class="secttl">Shift Log &amp; Event Register (' + fe.length +
+    (eFilter !== 'ALL' ? ' of ' + events.length + ' total' : '') + ')</div>';
+  if (eFilter !== 'ALL') {
+    h += '<div class="hint" style="margin:-6px 0 12px">Filtered by \u201C' + esc(eFilter) +
+      '\u201D \u2014 ' + events.length + ' entr' + (events.length === 1 ? 'y' : 'ies') +
+      ' total. Click <strong>All</strong> to see everything.</div>';
+  }
+  if (!fe.length) h += '<p class="empty">' +
+    (events.length > 0 && eFilter !== 'ALL'
+      ? 'No entries in this category. You have ' + events.length + ' entr' + (events.length === 1 ? 'y' : 'ies') + ' under other categories \u2014 click <strong>All</strong>.'
+      : 'No entries yet.') + '</p>';
+  fe.forEach(function (e) {
+    var col = catColor(e.cat);
+    h += '<div class="ev" style="border-left-color:' + col + '">' +
+      '<div class="ev-top"><span class="ev-cat" style="background:' + col + '">' + esc(e.cat) + '</span>' +
+      '<span class="ev-when">' + fmtDT(e.when) + '</span></div>' +
+      '<div class="ev-text">' + esc(e.text) + '</div>' +
+      (e.person ? '<div class="ev-person">\u{1F464} ' + esc(e.person) + '</div>' : '') +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<div class="ev-logged">Logged: ' + esc(e.logged) + '</div>' +
+      '<button class="btn sm ghost" onclick="deleteEvent(' + e.id + ')">Delete</button></div></div>';
+  });
+  return h + '</div>';
+}
+
+function viewArchive() {
+  var ar = archivedPermits();
+  var h = '<div class="wrap"><div class="secttl dim">Cancelled Permits \u2014 5-Year Retention Archive (' + ar.length + ')</div>';
+  if (!ar.length) h += '<p class="empty">No archived permits yet.</p>';
+  ar.forEach(function (p) {
+    h += '<div class="permit s-archived"><div class="permit-top">' +
+      '<div><div class="permit-no">' + esc(p.no) + '</div>' +
+      (p.desc ? '<div class="permit-desc">' + esc(p.desc) + '</div>' : '') + '</div>' +
+      '<span class="pill archived">Cancelled ' + (p.closedOn ? fmt(p.closedOn) : '') + '</span></div>' +
+      '<div class="permit-meta">' +
+      (p.loc ? '<div><div class="k">Location</div><div class="v">' + esc(p.loc) + '</div></div>' : '') +
+      '<div><div class="k">Start</div><div class="v">' + fmt(p.start) + '</div></div>' +
+      '<div><div class="k">Expiry</div><div class="v">' + fmt(p.expiry) + '</div></div></div></div>';
+  });
+  h += '<div class="note">Archived records retained for 5 years. Use <strong>Backup</strong> regularly for an external safety copy.</div>';
+  return h + '</div>';
+}
+
+function viewRecords() {
+  var h = '<div class="wrap"><div class="panel"><h3>Add a completed task to records</h3>' +
+    '<div class="field"><label>Task / Activity</label>' +
+    '<input id="rTask" value="' + esc(rcForm.task) + '" placeholder="e.g. Earth pit resistance test \u2014 BPPS"></div>' +
+    '<div class="field"><label>Note (optional)</label>' +
+    '<textarea id="rNote" rows="2" placeholder="Reading, remarks, WO number...">' + esc(rcForm.note) + '</textarea></div>' +
+    '<button class="btn" onclick="addRec()">+ Add to Records</button></div>';
+  h += '<div class="secttl">Completion &amp; Activity Log (' + records.length + ')</div>';
+  if (!records.length) h += '<p class="empty">No records yet.</p>';
+  records.forEach(function (r) {
+    h += '<div class="rec"><div class="rec-stamp">' + esc(r.stamp) + '</div><div>' +
+      '<div class="rec-task">' + esc(r.task) + '</div>' +
+      (r.note ? '<div class="rec-note">' + esc(r.note) + '</div>' : '') + '</div></div>';
+  });
+  return h + '</div>';
+}
+
+function viewBackup() {
+  var h = '<div class="wrap">' +
+    '<div class="panel"><h3>Alarm settings</h3>' +
+    '<div class="field"><label>Alarm volume (\u003cspan id="volLabel"\u003e' + Math.round(alarmVolume * 100) + '%\u003c/span\u003e)</label>' +
+    '<input type="range" min="0" max="1" step="0.05" value="' + alarmVolume + '" oninput="setVolume(this.value)" style="width:100%"></div>' +
+    '<div class="actions">' +
+    '<button class="btn ghost sm" onclick="testAlarm()">\u{1F50A} Test Alarm Sound</button>' +
+    '<button class="btn ghost sm" id="soundBtn2" onclick="toggleSound()">' + (soundOn ? 'Sound ON' : 'Sound OFF') + '</button>' +
+    '</div>' +
+    '<div class="note">Overdue alarm sounds a short burst, then repeats every 5 minutes until you mark the ' +
+    'activity Done or Acknowledge it. A pop-up appears on screen, the browser tab title flashes, and \u2014 if you ' +
+    'allowed notifications \u2014 a Windows corner notification fires. Click <strong>Test Alarm Sound</strong> to set a ' +
+    'comfortable level (your browser needs one click on the page before it will play sound).</div></div>' +
+
+    '<div class="panel"><h3>Backup &mdash; download all data</h3>' +
+    '<p class="muted">Downloads a single .json file containing reminders, permits, events, records, and all logs. ' +
+    'Keep this file safe (email it to yourself, save on USB, or sync to cloud). Do this regularly \u2014 ' +
+    'it is the only true copy of your data outside this browser.</p>' +
+    '<button class="btn" onclick="exportBackup()">\u{1F4BE} Download Backup (.json)</button></div>' +
+
+    '<div class="panel"><h3>Restore &mdash; load data from a backup file</h3>' +
+    '<p class="muted">Choose a .json backup file, then pick a mode:</p>' +
+    '<div class="field"><label>Backup file</label>' +
+    '<input type="file" id="restoreFile" accept=".json,application/json"></div>' +
+    '<div class="actions">' +
+    '<button class="btn green" onclick="doRestore(\'merge\')">\u{1F501} Merge (recommended)</button>' +
+    '<button class="btn red" onclick="doRestore(\'replace\')">\u26A0 Replace Everything</button>' +
+    '</div>' +
+    '<div class="note"><strong>Merge:</strong> adds new items from the backup; if an item exists in both, the backup version wins; nothing on this PC gets deleted. Safe for moving between laptops.<br>' +
+    '<strong>Replace:</strong> wipes current data and loads only what is in the file. Use only for a clean transfer.</div>' +
+    '</div>' +
+
+    '<div class="panel"><h3>Plain-text export</h3>' +
+    '<p class="muted">Human-readable .txt summary of all data. Good for printing or attaching to a report. Not a true backup \u2014 use the .json above for that.</p>' +
+    '<button class="btn ghost" onclick="exportAll()">\u2913 Export All Data (.txt)</button></div>' +
+    '</div>';
+  return h;
+}
+
+function renderModal() {
+  var host = document.getElementById('modalHost');
+  if (!modalPermit) { host.innerHTML = ''; return; }
+  var p = modalPermit;
+  host.innerHTML = '<div class="overlay"><div class="modal">' +
+    '<h2>\u26A0 Mandatory PTW Cancellation</h2>' +
+    '<div class="mline">Permit <span class="pno">' + esc(p.no) + '</span> has reached Day ' + PTW_CYCLE +
+    ' of its life cycle' + (p.desc ? ' \u2014 "' + esc(p.desc) + '"' : '') + '.</div>' +
+    '<div class="mline">This permit <strong>must be cancelled today</strong>. ' +
+    'Late cancellation is a reportable lapse and carries consequences.</div>' +
+    '<div class="actions" style="margin-top:18px">' +
+    '<button class="btn red" onclick="cancelPermit(' + p.id + ')">Cancel Permit Now \u2192 Archive</button>' +
+    '<button class="btn ghost" onclick="snoozeForce(' + p.id + ')">Acknowledge \u2014 cancel later</button></div>' +
+    '<div class="note">"Acknowledge" logs that you saw this, but the permit ' +
+    'stays flagged red until actually cancelled.</div></div></div>';
+}
+
+// ═══════════════════════ Boot ═══════════════════════
+function tickClock() {
+  var clk = document.getElementById('clock');
+  if (!clk) return;
+  var d = new Date();
+  clk.textContent = d.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) +
+    '   ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+function storageWorks() {
+  try {
+    localStorage.setItem('__ptw_test__', '1');
+    var ok = localStorage.getItem('__ptw_test__') === '1';
+    localStorage.removeItem('__ptw_test__');
+    return ok;
+  } catch (e) { return false; }
+}
+
+function boot() {
+  try { document.title = baseTitle; } catch (e) { }
+  if (!storageWorks()) {
+    var host = document.getElementById('view');
+    if (host) {
+      host.innerHTML = '<div class="wrap"><div class="warn-banner">' +
+        '<div class="wt">\u26A0 Storage is blocked \u2014 data cannot be saved</div>' +
+        '<div class="wl">Your browser is preventing this page from saving data. This usually happens when ' +
+        'the file is opened in a private/incognito window, or certain security settings block local storage ' +
+        'for files opened directly from disk.<br><br>' +
+        '<strong>Fix:</strong> Open this file in a normal (non-incognito) Chrome window. If it still happens, ' +
+        'in Chrome go to Settings \u2192 Privacy \u2192 Site Settings \u2192 Cookies and allow it, or use the ' +
+        'Backup file to carry data instead. Your entries will not persist until this is resolved.</div></div></div>';
+    }
+    return;
+  }
+  requestNotifyPermission();
+  render();
+  alarmTick();
+  setInterval(tickClock, 1000);
+  setInterval(alarmTick, 30000);
+  setInterval(function () { updateTabTitle(overdueReminders().length); }, 1200);
+  document.addEventListener('click', function () { getCtx(); }, { once: true });
+}
+boot();
+
+</script></body></html>
