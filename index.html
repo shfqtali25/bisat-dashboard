@@ -389,6 +389,29 @@ function signInGoogle() {
   setSync('syncing', 'Opening Google sign-in...');
   gTokenClient.requestAccessToken({ prompt: 'consent' });
 }
+
+// ─── Silent token renewal (every 50 min while signed in) ───
+var gRenewTimer = null;
+function silentRenewToken() {
+  if (!gInitialized || !gTokenClient) return;
+  if (!gAccessToken) return; // not signed in, nothing to renew
+  console.log('Renewing Google token silently...');
+  try {
+    // empty prompt = silent refresh (no popup) if Google still trusts us
+    gTokenClient.requestAccessToken({ prompt: '' });
+  } catch (e) {
+    console.warn('silent renew failed', e);
+  }
+}
+function startRenewTimer() {
+  if (gRenewTimer) clearInterval(gRenewTimer);
+  // renew every 50 minutes (tokens last 60)
+  gRenewTimer = setInterval(silentRenewToken, 50 * 60 * 1000);
+}
+function stopRenewTimer() {
+  if (gRenewTimer) { clearInterval(gRenewTimer); gRenewTimer = null; }
+}
+
 function signOutGoogle() {
   if (gAccessToken && google.accounts.oauth2) {
     google.accounts.oauth2.revoke(gAccessToken, function () { });
@@ -397,6 +420,7 @@ function signOutGoogle() {
   localStorage.removeItem('ptw_gToken');
   localStorage.removeItem('ptw_gTokenAt');
   localStorage.removeItem('ptw_sheetId');
+  stopRenewTimer();
   setSync('offline', 'Signed out');
   render();
 }
@@ -419,6 +443,8 @@ function afterSignIn() {
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (d.email) { gUserEmail = d.email; render(); }
   }).catch(function () { });
+  // ─── Start silent token renewal so the user doesn't get auto-signed-out every hour ───
+  startRenewTimer();
 }
 
 function verifySheet() {
@@ -530,47 +556,91 @@ function deserializeRow(row, headers, parseRules) {
   return o;
 }
 
+// ─── Layer 1 safety: count cloud rows before pushing ───
+function countCloudRows() {
+  return gapi.client.sheets.spreadsheets.values.batchGet({
+    spreadsheetId: gSpreadsheetId,
+    ranges: ['Reminders!A2:A', 'Permits!A2:A', 'Events!A2:A', 'Records!A2:A']
+  }).then(function (resp) {
+    var ranges = resp.result.valueRanges || [];
+    var nonEmpty = function (arr) { return (arr || []).filter(function (r) { return r && r[0]; }).length; };
+    return {
+      reminders: nonEmpty((ranges[0] || {}).values),
+      permits: nonEmpty((ranges[1] || {}).values),
+      events: nonEmpty((ranges[2] || {}).values),
+      records: nonEmpty((ranges[3] || {}).values)
+    };
+  });
+}
+
 function pushAllToSheet() {
   if (!gSpreadsheetId) return Promise.resolve();
-  var data = [];
-  // build rows for each tab
-  data.push({
-    range: 'Reminders!A2',
-    values: reminders.map(function (r) { return serializeRow(r, HEADERS.Reminders); })
-  });
-  data.push({
-    range: 'Permits!A2',
-    values: permits.map(function (p) { return serializeRow(p, HEADERS.Permits); })
-  });
-  data.push({
-    range: 'Events!A2',
-    values: events.map(function (e) { return serializeRow(e, HEADERS.Events); })
-  });
-  data.push({
-    range: 'Records!A2',
-    values: records.map(function (r) { return serializeRow(r, HEADERS.Records); })
-  });
-  var checkRows = [];
-  for (var day in checks) if (checks.hasOwnProperty(day)) {
-    checkRows.push([day, (checks[day] || []).join(',')]);
-  }
-  data.push({ range: 'Checks!A2', values: checkRows });
-  data.push({ range: 'CustomCats!A2', values: customCats.map(function (c) { return [c]; }) });
-  data.push({
-    range: 'Settings!A2',
-    values: [
-      ['soundOn', soundOn ? 'TRUE' : 'FALSE'],
-      ['alarmVolume', String(alarmVolume)]
-    ]
-  });
-  // first clear each data range, then write
-  return gapi.client.sheets.spreadsheets.values.batchClear({
-    spreadsheetId: gSpreadsheetId,
-    resource: { ranges: SHEET_TABS.map(function (t) { return t + '!A2:Z'; }) }
-  }).then(function () {
-    return gapi.client.sheets.spreadsheets.values.batchUpdate({
+  // ─── Layer 1 SAFETY GUARD ───
+  // Before pushing, check cloud has not got MORE data than local.
+  // If it does, refuse to push and pull cloud down instead.
+  return countCloudRows().then(function (cloudCounts) {
+    var localCounts = {
+      reminders: reminders.length,
+      permits: permits.length,
+      events: events.length,
+      records: records.length
+    };
+    var lost = [];
+    // tolerance: cloud can have up to 0 more than local (strict)
+    if (cloudCounts.events > localCounts.events) lost.push('Events ' + cloudCounts.events + '→' + localCounts.events);
+    if (cloudCounts.permits > localCounts.permits) lost.push('Permits ' + cloudCounts.permits + '→' + localCounts.permits);
+    if (cloudCounts.records > localCounts.records) lost.push('Records ' + cloudCounts.records + '→' + localCounts.records);
+    if (cloudCounts.reminders > localCounts.reminders) lost.push('Reminders ' + cloudCounts.reminders + '→' + localCounts.reminders);
+
+    if (lost.length > 0) {
+      // SAFETY BLOCK: cloud has more rows than local. Do NOT overwrite. Pull cloud down instead.
+      console.warn('Layer 1 SAFETY: refusing push, cloud has more data. Lost would be:', lost.join('; '));
+      setSync('error', 'Sync blocked: cloud has more data. Reloading...');
+      // Reload from cloud — restores any data missing locally
+      loadAllFromSheet();
+      // Return rejected promise so the caller knows the push didn't happen
+      return Promise.reject(new Error('SAFETY_BLOCK: cloud had more data ('+ lost.join('; ') +')'));
+    }
+
+    // Safe to push
+    var data = [];
+    data.push({
+      range: 'Reminders!A2',
+      values: reminders.map(function (r) { return serializeRow(r, HEADERS.Reminders); })
+    });
+    data.push({
+      range: 'Permits!A2',
+      values: permits.map(function (p) { return serializeRow(p, HEADERS.Permits); })
+    });
+    data.push({
+      range: 'Events!A2',
+      values: events.map(function (e) { return serializeRow(e, HEADERS.Events); })
+    });
+    data.push({
+      range: 'Records!A2',
+      values: records.map(function (r) { return serializeRow(r, HEADERS.Records); })
+    });
+    var checkRows = [];
+    for (var day in checks) if (checks.hasOwnProperty(day)) {
+      checkRows.push([day, (checks[day] || []).join(',')]);
+    }
+    data.push({ range: 'Checks!A2', values: checkRows });
+    data.push({ range: 'CustomCats!A2', values: customCats.map(function (c) { return [c]; }) });
+    data.push({
+      range: 'Settings!A2',
+      values: [
+        ['soundOn', soundOn ? 'TRUE' : 'FALSE'],
+        ['alarmVolume', String(alarmVolume)]
+      ]
+    });
+    return gapi.client.sheets.spreadsheets.values.batchClear({
       spreadsheetId: gSpreadsheetId,
-      resource: { valueInputOption: 'RAW', data: data.filter(function (d) { return d.values && d.values.length > 0; }) }
+      resource: { ranges: SHEET_TABS.map(function (t) { return t + '!A2:Z'; }) }
+    }).then(function () {
+      return gapi.client.sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: gSpreadsheetId,
+        resource: { valueInputOption: 'RAW', data: data.filter(function (d) { return d.values && d.values.length > 0; }) }
+      });
     });
   });
 }
@@ -654,8 +724,13 @@ function doSync() {
     gLastSync = new Date();
   }).catch(function (e) {
     gSyncBusy = false;
-    console.error('sync err', e);
-    setSync('error', 'Sync failed (local saved)');
+    if (e && e.message && e.message.indexOf('SAFETY_BLOCK') === 0) {
+      // Layer 1 already set the status and triggered a load. Don't overwrite.
+      console.warn('Sync skipped (safety):', e.message);
+    } else {
+      console.error('sync err', e);
+      setSync('error', 'Sync failed (local saved)');
+    }
   });
 }
 function syncNow() {
@@ -1063,25 +1138,39 @@ function getCtx() {
 }
 // a 3-second attention-grabbing siren pattern (rising/falling tones)
 function playAlarmBurst() {
+  // Doorbell-style chime: high tone (E5, ~659Hz) then lower tone (C5, ~523Hz),
+  // each with a soft bell envelope. Repeats twice for ding-dong, ding-dong.
   var ctx = getCtx();
   if (!ctx) return;
   var vol = Math.max(0, Math.min(1, alarmVolume));
   if (vol <= 0) return;
   var now = ctx.currentTime;
-  // 6 tone sweeps over ~3s
-  for (var i = 0; i < 6; i++) {
-    var o = ctx.createOscillator(), g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.type = 'sawtooth';
-    var startT = now + i * 0.5;
-    o.frequency.setValueAtTime(660, startT);
-    o.frequency.linearRampToValueAtTime(1180, startT + 0.25);
-    o.frequency.linearRampToValueAtTime(660, startT + 0.48);
-    g.gain.setValueAtTime(0.0001, startT);
-    g.gain.exponentialRampToValueAtTime(vol, startT + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, startT + 0.47);
-    o.start(startT); o.stop(startT + 0.5);
-  }
+  // tone definitions: [startOffsetSec, freqHz, durationSec]
+  var bell = [
+    [0.00, 659.25, 0.80],   // ding
+    [0.55, 523.25, 0.95],   // dong
+    [1.80, 659.25, 0.80],   // ding (repeat)
+    [2.35, 523.25, 0.95]    // dong (repeat)
+  ];
+  bell.forEach(function (b) {
+    var startT = now + b[0];
+    var freq = b[1];
+    var dur = b[2];
+    // a doorbell uses 2 oscillators for richness (fundamental + 5th harmonic)
+    [1, 2].forEach(function (mult, idx) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq * mult, startT);
+      // bell envelope: very fast attack, slow decay
+      var peakVol = idx === 0 ? vol : vol * 0.35;  // harmonic is quieter
+      g.gain.setValueAtTime(0.0001, startT);
+      g.gain.exponentialRampToValueAtTime(peakVol, startT + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, startT + dur);
+      o.start(startT);
+      o.stop(startT + dur + 0.05);
+    });
+  });
 }
 function testAlarm() { playAlarmBurst(); }
 
