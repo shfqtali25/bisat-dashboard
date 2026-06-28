@@ -3,6 +3,8 @@
 <title>PM &amp; PTW Dashboard</title>
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1783,6 +1785,47 @@ function viewBackup() {
     '</div>' +
     '<div class="cloud-info">' + esc(gSyncMessage) + '</div></div>' +
 
+    // ─── Share read-only link ───
+    '<div class="panel"><h3>Share read-only link</h3>' +
+    '<p class="muted">Generate a link your team can open to view Events and Permits — read-only, no sign-in needed. ' +
+    'The link includes a secret key, so it cannot be guessed.</p>' +
+    '<div class="cloud-info" style="background:var(--bg);border:1px solid var(--line);padding:9px 12px;border-radius:5px;word-break:break-all;font-family:JetBrains Mono,monospace;font-size:11px">' +
+    (gSpreadsheetId ? esc(getShareLinkText()) : '<em>Sign in to Google first to generate the link.</em>') +
+    '</div>' +
+    '<div class="actions">' +
+    (gSpreadsheetId
+      ? '<button class="btn" onclick="copyShareLink()">\u{1F4CB} Copy Share Link</button>'
+      : '') +
+    '</div>' +
+    '<div class="note"><strong>Important:</strong> for the link to actually work, you must <strong>publish the Google Sheet to web</strong> once. ' +
+    'Open the Sheet \u2192 File \u2192 Share \u2192 Publish to web \u2192 select Entire Document \u2192 CSV format \u2192 Publish. ' +
+    'Otherwise visitors will get an empty page.</div></div>' +
+
+    // ─── PDF Report generator ───
+    '<div class="panel"><h3>Generate PDF report</h3>' +
+    '<p class="muted">Create a clean printable PDF of Events and Permits for the chosen period. Good for management reports.</p>' +
+    '<div class="grid2">' +
+    '<div class="field"><label>Period</label><select id="reportRange">' +
+    '<option value="today">Today</option>' +
+    '<option value="week">Last 7 days</option>' +
+    '<option value="month" selected>Current month</option>' +
+    '<option value="all">All records</option>' +
+    '<option value="custom">Custom range</option>' +
+    '</select></div>' +
+    '<div class="field"><label>Include</label><select id="reportInclude">' +
+    '<option value="both" selected>Events &amp; Permits</option>' +
+    '<option value="events">Events only</option>' +
+    '<option value="permits">Permits only</option>' +
+    '</select></div></div>' +
+    '<div class="grid2" id="customRangeRow" style="display:none">' +
+    '<div class="field"><label>From</label><input type="date" id="reportFrom"></div>' +
+    '<div class="field"><label>To</label><input type="date" id="reportTo"></div>' +
+    '</div>' +
+    '<div class="actions">' +
+    '<button class="btn" onclick="onGenerateReport()">\u{1F4C4} Generate PDF Report</button>' +
+    '</div>' +
+    '<div class="note">Report uses local data on this device. Sign in first to ensure cloud data is loaded.</div></div>' +
+
     '<div class="panel"><h3>Alarm settings</h3>' +
     '<div class="field"><label>Alarm volume (\u003cspan id="volLabel"\u003e' + Math.round(alarmVolume * 100) + '%\u003c/span\u003e)</label>' +
     '<input type="range" min="0" max="1" step="0.05" value="' + alarmVolume + '" oninput="setVolume(this.value)" style="width:100%"></div>' +
@@ -1855,8 +1898,403 @@ function storageWorks() {
   } catch (e) { return false; }
 }
 
+// ═══════════════════════ PUBLIC READ-ONLY VIEW MODE ═══════════════════════
+var PUBLIC_TOKEN = 'S4M4MCUpPvItX4uvfg9PfA';
+var publicMode = false;
+var publicData = { events: [], permits: [] };
+
+function isPublicViewRequested() {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    return p.get('view') === 'public' && p.get('key') === PUBLIC_TOKEN;
+  } catch (e) { return false; }
+}
+
+// Parse a CSV string into rows (handles quoted fields containing commas)
+function parseCSV(text) {
+  var rows = [];
+  var row = [];
+  var field = '';
+  var inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else field += c;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function fetchPublicCSV(sheetGid) {
+  // expects user to have published the sheet to web
+  // The published URL pattern uses spreadsheet ID + gid
+  var sheetId = localStorage.getItem('ptw_sheetId') || '';
+  if (!sheetId) return Promise.resolve([]);
+  var url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&gid=' + sheetGid;
+  return fetch(url).then(function (r) {
+    if (!r.ok) throw new Error('Sheet not published or not accessible');
+    return r.text();
+  }).then(parseCSV);
+}
+
+// Alternative: use the "published to web" CSV endpoint that works without login
+function fetchPublishedCSV(tabName) {
+  var sheetId = localStorage.getItem('ptw_sheetId') || PUBLIC_SHEET_ID;
+  // The /pub endpoint requires the sheet to be Published to web
+  var url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(tabName);
+  return fetch(url).then(function (r) {
+    if (!r.ok) throw new Error('Failed to fetch ' + tabName + ' (status ' + r.status + ')');
+    return r.text();
+  }).then(parseCSV);
+}
+
+// Hard-coded fallback for the public sheet ID (filled in by the user)
+var PUBLIC_SHEET_ID = '';
+
+function loadPublicData() {
+  setPublicStatus('Loading published data...');
+  return Promise.all([
+    fetchPublishedCSV('Events').catch(function () { return []; }),
+    fetchPublishedCSV('Permits').catch(function () { return []; })
+  ]).then(function (results) {
+    var evRows = results[0] || [];
+    var prRows = results[1] || [];
+    // first row is headers
+    if (evRows.length > 1) {
+      var evHeaders = evRows[0];
+      publicData.events = evRows.slice(1).filter(function (r) { return r[0]; }).map(function (r) {
+        var o = {};
+        evHeaders.forEach(function (h, i) { o[h] = r[i] === undefined ? '' : r[i]; });
+        return o;
+      });
+    }
+    if (prRows.length > 1) {
+      var prHeaders = prRows[0];
+      publicData.permits = prRows.slice(1).filter(function (r) { return r[0]; }).map(function (r) {
+        var o = {};
+        prHeaders.forEach(function (h, i) { o[h] = r[i] === undefined ? '' : r[i]; });
+        return o;
+      });
+    }
+    setPublicStatus('Loaded ' + publicData.events.length + ' events, ' + publicData.permits.length + ' permits');
+    renderPublicView();
+  }).catch(function (e) {
+    setPublicStatus('Could not load: ' + e.message);
+  });
+}
+
+function setPublicStatus(msg) {
+  var el = document.getElementById('publicStatus');
+  if (el) el.textContent = msg;
+}
+
+var publicTab = 'events';
+function setPublicTab(t) { publicTab = t; renderPublicView(); }
+
+function renderPublicView() {
+  var v = document.getElementById('view');
+  if (!v) return;
+  var h = '<div class="wrap">' +
+    '<div class="warn-banner" style="background:linear-gradient(110deg,rgba(232,119,34,.18),rgba(232,119,34,.08));border-color:var(--accent)">' +
+    '<div class="wt" style="color:var(--accent)">\u{1F441} READ-ONLY VIEW \u2014 Shared link</div>' +
+    '<div class="wl">You are viewing data published from the Bisat dashboard. Records are read-only. ' +
+    'Data refreshes when you reload the page.</div></div>' +
+
+    '<div class="tabs" style="margin:14px 0;border:none;padding:0;background:transparent">' +
+    '<button class="tab' + (publicTab === 'events' ? ' on' : '') + '" onclick="setPublicTab(\'events\')">Events Log (' + publicData.events.length + ')</button>' +
+    '<button class="tab' + (publicTab === 'permits' ? ' on' : '') + '" onclick="setPublicTab(\'permits\')">Permits (' + publicData.permits.length + ')</button>' +
+    '</div>';
+
+  if (publicTab === 'events') {
+    var fe = publicData.events.slice().sort(function (a, b) {
+      var da = new Date(a.when || 0).getTime();
+      var db = new Date(b.when || 0).getTime();
+      return db - da;
+    });
+    h += '<div class="secttl">Shift Log &amp; Event Register</div>';
+    if (!fe.length) h += '<p class="empty">No events published yet.</p>';
+    fe.forEach(function (e) {
+      var col = (typeof catColor === 'function') ? catColor(e.cat) : '#7d92a3';
+      h += '<div class="ev" style="border-left-color:' + col + '">' +
+        '<div class="ev-top"><span class="ev-cat" style="background:' + col + '">' + esc(e.cat || 'General') + '</span>' +
+        '<span class="ev-when">' + (e.when ? fmtDT(e.when) : '') + '</span></div>' +
+        '<div class="ev-text">' + esc(e.text || '') + '</div>' +
+        (e.person ? '<div class="ev-person">\u{1F464} ' + esc(e.person) + '</div>' : '') +
+        '<div class="ev-logged">Logged: ' + esc(e.logged || '') + '</div></div>';
+    });
+  } else {
+    var fp = publicData.permits.slice().sort(function (a, b) {
+      return new Date(b.start || 0).getTime() - new Date(a.start || 0).getTime();
+    });
+    h += '<div class="secttl">Permits</div>';
+    if (!fp.length) h += '<p class="empty">No permits published yet.</p>';
+    fp.forEach(function (p) {
+      var st = (p.status || 'active');
+      h += '<div class="permit s-' + (st === 'archived' ? 'archived' : 'ok') + '">' +
+        '<div class="permit-top"><div><div class="permit-no">' + esc(p.no || '') + '</div>' +
+        (p.desc ? '<div class="permit-desc">' + esc(p.desc) + '</div>' : '') + '</div>' +
+        '<span class="pill ' + (st === 'archived' ? 'archived' : 'ok') + '">' + esc(st) + '</span></div>' +
+        '<div class="permit-meta">' +
+        (p.loc ? '<div><div class="k">Location</div><div class="v">' + esc(p.loc) + '</div></div>' : '') +
+        '<div><div class="k">Start</div><div class="v">' + (p.start ? fmt(p.start) : '') + '</div></div>' +
+        '<div><div class="k">Expiry</div><div class="v">' + (p.expiry ? fmt(p.expiry) : '') + '</div></div>' +
+        (p.closedOn ? '<div><div class="k">Cancelled</div><div class="v">' + fmt(p.closedOn) + '</div></div>' : '') +
+        '</div></div>';
+    });
+  }
+
+  h += '<div class="note" id="publicStatus" style="margin-top:24px"></div></div>';
+  v.innerHTML = h;
+}
+
+function bootPublic() {
+  // hide normal UI elements
+  try {
+    var hdrBtns = document.querySelectorAll('.hdr-btns .btn, .auth-row .btn, .tabs');
+    hdrBtns.forEach(function (e) { if (e.classList && e.classList.contains('tab')) return; e.style.display = 'none'; });
+    var mainTabs = document.querySelectorAll('body > .tabs');
+    mainTabs.forEach(function (e) { e.style.display = 'none'; });
+    document.title = 'OQEP Bisat \u2014 Read-only View';
+  } catch (e) { }
+  // We need a sheet ID. If we don't have it cached, the public link can't fetch.
+  // Public users get the sheet ID via URL ?sheet=...
+  try {
+    var p = new URLSearchParams(window.location.search);
+    var sid = p.get('sheet');
+    if (sid) localStorage.setItem('ptw_sheetId', sid);
+  } catch (e) { }
+  loadPublicData();
+}
+
+// ═══════════════════════ PDF REPORT GENERATOR ═══════════════════════
+function getReportRange(range) {
+  var now = new Date();
+  var start, end;
+  if (range === 'today') {
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  } else if (range === 'week') {
+    end = new Date(now); end.setHours(23, 59, 59);
+    start = new Date(now); start.setDate(start.getDate() - 7); start.setHours(0, 0, 0);
+  } else if (range === 'month') {
+    end = new Date(now); end.setHours(23, 59, 59);
+    start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (range === 'all') {
+    start = new Date(0); end = new Date(now); end.setHours(23, 59, 59);
+  } else {
+    // custom: read from form inputs
+    var fromEl = document.getElementById('reportFrom');
+    var toEl = document.getElementById('reportTo');
+    start = fromEl && fromEl.value ? new Date(fromEl.value + 'T00:00:00') : new Date(0);
+    end = toEl && toEl.value ? new Date(toEl.value + 'T23:59:59') : new Date();
+  }
+  return { start: start, end: end };
+}
+
+function generateReport(range, includeEvents, includePermits) {
+  if (!window.jspdf) {
+    alert('PDF library still loading — try again in a moment.');
+    return;
+  }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  var rng = getReportRange(range);
+
+  // Title block
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(27, 77, 90); // dark teal
+  doc.text('OQEP Block 60 \u2014 Bisat PPS', 14, 18);
+  doc.setFontSize(11);
+  doc.setTextColor(120, 120, 120);
+  doc.text('PM & PTW Control Dashboard Report', 14, 25);
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  var rangeLabel = {
+    today: 'Today',
+    week: 'Last 7 days',
+    month: 'Current month',
+    all: 'All records',
+    custom: 'Custom range'
+  }[range] || range;
+  doc.text('Period: ' + rangeLabel +
+    '  (' + rng.start.toLocaleDateString('en-GB') + ' to ' + rng.end.toLocaleDateString('en-GB') + ')', 14, 32);
+  doc.text('Generated: ' + nowStamp(), 14, 37);
+
+  // accent line
+  doc.setDrawColor(232, 119, 34);
+  doc.setLineWidth(1.2);
+  doc.line(14, 41, 196, 41);
+
+  var y = 50;
+
+  // Events table
+  if (includeEvents) {
+    var ev = events.filter(function (e) {
+      var t = new Date(e.when).getTime();
+      return t >= rng.start.getTime() && t <= rng.end.getTime();
+    }).sort(function (a, b) { return new Date(b.when) - new Date(a.when); });
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(27, 77, 90);
+    doc.text('Shift Log & Event Register (' + ev.length + ')', 14, y);
+    y += 5;
+
+    if (ev.length === 0) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text('No events in this period.', 14, y + 3);
+      y += 12;
+    } else {
+      doc.autoTable({
+        startY: y,
+        head: [['Date/Time', 'Category', 'Person', 'Details']],
+        body: ev.map(function (e) {
+          return [
+            fmtDT(e.when),
+            e.cat || '',
+            e.person || '',
+            e.text || ''
+          ];
+        }),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [27, 77, 90], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        columnStyles: {
+          0: { cellWidth: 30 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 'auto' }
+        },
+        margin: { left: 14, right: 14 }
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+  }
+
+  // Permits table
+  if (includePermits) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    var pr = permits.filter(function (p) {
+      var t = new Date(p.start).getTime();
+      return t >= rng.start.getTime() && t <= rng.end.getTime();
+    }).sort(function (a, b) { return new Date(b.start) - new Date(a.start); });
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(27, 77, 90);
+    doc.text('Permits to Work (' + pr.length + ')', 14, y);
+    y += 5;
+
+    if (pr.length === 0) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text('No permits in this period.', 14, y + 3);
+    } else {
+      doc.autoTable({
+        startY: y,
+        head: [['Permit #', 'Description', 'Location', 'Start', 'Expiry', 'Status']],
+        body: pr.map(function (p) {
+          return [
+            p.no || '',
+            p.desc || '',
+            p.loc || '',
+            p.start ? fmt(p.start) : '',
+            p.expiry ? fmt(p.expiry) : '',
+            (p.status || 'active') + (p.jobComplete ? ' (job done)' : '')
+          ];
+        }),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [27, 77, 90], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 28 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 22 },
+          5: { cellWidth: 25 }
+        },
+        margin: { left: 14, right: 14 }
+      });
+    }
+  }
+
+  // Footer with page numbers
+  var pageCount = doc.internal.getNumberOfPages();
+  for (var i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(140, 140, 140);
+    doc.text('Page ' + i + ' of ' + pageCount, 196, 290, { align: 'right' });
+    doc.text('Marmul Falcon Trading & Contracting Co. LLC \u2014 OQEP Block 60 Bisat PPS', 14, 290);
+  }
+
+  var fname = 'Bisat_Report_' + range + '_' + todayStr() + '.pdf';
+  doc.save(fname);
+}
+
+function onGenerateReport() {
+  var rangeEl = document.getElementById('reportRange');
+  var incEl = document.getElementById('reportInclude');
+  var range = rangeEl ? rangeEl.value : 'month';
+  var inc = incEl ? incEl.value : 'both';
+  var includeEvents = (inc === 'both' || inc === 'events');
+  var includePermits = (inc === 'both' || inc === 'permits');
+  if (range === 'custom') {
+    var f = document.getElementById('reportFrom');
+    var t = document.getElementById('reportTo');
+    if (!f.value || !t.value) { alert('Please pick both From and To dates for a custom range.'); return; }
+  }
+  generateReport(range, includeEvents, includePermits);
+}
+
+// auto-show custom range fields when "custom" is picked
+document.addEventListener('change', function (e) {
+  if (e.target && e.target.id === 'reportRange') {
+    var row = document.getElementById('customRangeRow');
+    if (row) row.style.display = (e.target.value === 'custom') ? '' : 'none';
+  }
+});
+
+function getShareLinkText() {
+  var sheetId = localStorage.getItem('ptw_sheetId') || '';
+  var base = window.location.origin + window.location.pathname;
+  return base + '?view=public&key=' + PUBLIC_TOKEN + '&sheet=' + sheetId;
+}
+
+function copyShareLink() {
+  var link = getShareLinkText();
+  navigator.clipboard.writeText(link).then(function () {
+    alert('Read-only link copied to clipboard!\n\nShare this link with your team. They will see Events and Permits only, no editing.');
+  }, function () {
+    prompt('Copy this link to share read-only view:', link);
+  });
+}
+
+
 function boot() {
   try { document.title = baseTitle; } catch (e) { }
+  // Public view branch — bypass storage check and Google sign-in entirely
+  if (isPublicViewRequested()) {
+    publicMode = true;
+    bootPublic();
+    return;
+  }
   if (!storageWorks()) {
     var host = document.getElementById('view');
     if (host) {
