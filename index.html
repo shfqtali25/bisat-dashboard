@@ -1947,11 +1947,21 @@ function fetchPublicCSV(sheetGid) {
   }).then(parseCSV);
 }
 
-// Alternative: use the "published to web" CSV endpoint that works without login
+// ─── Public CSV fetcher using the "Published to web" endpoint ───
+// Each tab is identified by its numeric "gid". These were obtained from the
+// Sheet URL when each tab is selected: ...edit?gid=NUMBER#gid=NUMBER
+var PUBLISH_URL_PREFIX = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRCHbxNRJeVuwnXUfmM3OZtZwuN4fCm7LQonVbxsvanZn-GeRHjSAywKjSOBcuf4GabPBSBuMN0EE-D/pub';
+var TAB_GIDS = {
+  Events: '324519693',
+  Permits: '1984413429'
+};
+
 function fetchPublishedCSV(tabName) {
-  var sheetId = localStorage.getItem('ptw_sheetId') || PUBLIC_SHEET_ID;
-  // The /pub endpoint requires the sheet to be Published to web
-  var url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(tabName);
+  var gid = TAB_GIDS[tabName];
+  if (!gid) return Promise.reject(new Error('No GID configured for tab: ' + tabName));
+  // /pub?output=csv&gid=NNN serves the named tab as public CSV when the sheet
+  // has been Published to web. No authentication required.
+  var url = PUBLISH_URL_PREFIX + '?output=csv&gid=' + gid;
   return fetch(url).then(function (r) {
     if (!r.ok) throw new Error('Failed to fetch ' + tabName + ' (status ' + r.status + ')');
     return r.text();
