@@ -2015,12 +2015,7 @@ function renderPublicView() {
   var v = document.getElementById('view');
   if (!v) return;
   var h = '<div class="wrap">' +
-    '<div class="warn-banner" style="background:linear-gradient(110deg,rgba(232,119,34,.18),rgba(232,119,34,.08));border-color:var(--accent)">' +
-    '<div class="wt" style="color:var(--accent)">\u{1F441} READ-ONLY VIEW \u2014 Shared link</div>' +
-    '<div class="wl">You are viewing data published from the Bisat dashboard. Records are read-only. ' +
-    'Data refreshes when you reload the page.</div></div>' +
-
-    '<div class="tabs" style="margin:14px 0;border:none;padding:0;background:transparent">' +
+    '<div class="tabs" style="margin:14px 0 18px;border:none;padding:0;background:transparent">' +
     '<button class="tab' + (publicTab === 'events' ? ' on' : '') + '" onclick="setPublicTab(\'events\')">Events Log (' + publicData.events.length + ')</button>' +
     '<button class="tab' + (publicTab === 'permits' ? ' on' : '') + '" onclick="setPublicTab(\'permits\')">Permits (' + publicData.permits.length + ')</button>' +
     '</div>';
