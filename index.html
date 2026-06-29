@@ -1809,6 +1809,7 @@ function viewBackup() {
     '<option value="today">Today</option>' +
     '<option value="week">Last 7 days</option>' +
     '<option value="month" selected>Current month</option>' +
+    '<option value="lastmonth">Past month</option>' +
     '<option value="all">All records</option>' +
     '<option value="custom">Custom range</option>' +
     '</select></div>' +
@@ -2097,6 +2098,10 @@ function getReportRange(range) {
   } else if (range === 'month') {
     end = new Date(now); end.setHours(23, 59, 59);
     start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (range === 'lastmonth') {
+    // Past calendar month: from 1st of last month to last day of last month
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+    end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
   } else if (range === 'all') {
     start = new Date(0); end = new Date(now); end.setHours(23, 59, 59);
   } else {
@@ -2151,6 +2156,7 @@ function generateReport(range, includeEvents, includePermits) {
     today: 'Today',
     week: 'Last 7 days',
     month: 'Current month',
+    lastmonth: 'Past month',
     all: 'All records',
     custom: 'Custom range'
   }[range] || range;
@@ -2278,9 +2284,70 @@ function generateReport(range, includeEvents, includePermits) {
 }
 
 function publicDownloadPDF() {
-  // Public viewers get a report covering ALL their visible data
-  // (no period filter form is shown to them, so use 'all').
-  generateReport('all', true, true);
+  // Show an options modal so public viewers can pick period + content,
+  // matching the signed-in dashboard's report options.
+  var host = document.getElementById('alarmModalHost') || document.getElementById('modalHost');
+  if (!host) { generateReport('all', true, true); return; }
+  host.innerHTML = '<div class="overlay"><div class="modal" style="border-color:var(--accent);max-width:480px">' +
+    '<h2 style="color:var(--accent)">\u{1F4C4} Download PDF Report</h2>' +
+    '<div class="mline" style="margin-top:14px">' +
+    '<div class="field"><label>Period</label><select id="pubReportRange">' +
+    '<option value="today">Today</option>' +
+    '<option value="week">Last 7 days</option>' +
+    '<option value="month" selected>Current month</option>' +
+    '<option value="lastmonth">Past month</option>' +
+    '<option value="all">All records</option>' +
+    '<option value="custom">Custom range</option>' +
+    '</select></div>' +
+    '<div class="field"><label>Include</label><select id="pubReportInclude">' +
+    '<option value="both" selected>Events &amp; Permits</option>' +
+    '<option value="events">Events log only</option>' +
+    '<option value="permits">Permits only</option>' +
+    '</select></div>' +
+    '<div class="grid2" id="pubCustomRangeRow" style="display:none">' +
+    '<div class="field"><label>From</label><input type="date" id="pubReportFrom"></div>' +
+    '<div class="field"><label>To</label><input type="date" id="pubReportTo"></div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="actions" style="margin-top:18px">' +
+    '<button class="btn" onclick="confirmPublicDownload()">Generate PDF</button>' +
+    '<button class="btn ghost" onclick="closePublicReportModal()">Cancel</button>' +
+    '</div></div></div>';
+  // wire up the custom-range toggle for the modal's own select
+  var sel = document.getElementById('pubReportRange');
+  if (sel) {
+    sel.addEventListener('change', function () {
+      var row = document.getElementById('pubCustomRangeRow');
+      if (row) row.style.display = (sel.value === 'custom') ? '' : 'none';
+    });
+  }
+}
+
+function closePublicReportModal() {
+  var host = document.getElementById('alarmModalHost') || document.getElementById('modalHost');
+  if (host) host.innerHTML = '';
+}
+
+function confirmPublicDownload() {
+  var rangeEl = document.getElementById('pubReportRange');
+  var incEl = document.getElementById('pubReportInclude');
+  var range = rangeEl ? rangeEl.value : 'month';
+  var inc = incEl ? incEl.value : 'both';
+  var includeEvents = (inc === 'both' || inc === 'events');
+  var includePermits = (inc === 'both' || inc === 'permits');
+  if (range === 'custom') {
+    var f = document.getElementById('pubReportFrom');
+    var t = document.getElementById('pubReportTo');
+    if (!f.value || !t.value) { alert('Please pick both From and To dates for a custom range.'); return; }
+    // generateReport reads reportFrom / reportTo by ID — mirror values there
+    var tempFrom = document.createElement('input'); tempFrom.id = 'reportFrom'; tempFrom.value = f.value; tempFrom.style.display='none'; document.body.appendChild(tempFrom);
+    var tempTo = document.createElement('input'); tempTo.id = 'reportTo'; tempTo.value = t.value; tempTo.style.display='none'; document.body.appendChild(tempTo);
+    generateReport('custom', includeEvents, includePermits);
+    document.body.removeChild(tempFrom); document.body.removeChild(tempTo);
+  } else {
+    generateReport(range, includeEvents, includePermits);
+  }
+  closePublicReportModal();
 }
 
 function onGenerateReport() {
