@@ -635,16 +635,61 @@ function pushAllToSheet() {
         ['alarmVolume', String(alarmVolume)]
       ]
     });
-    return gapi.client.sheets.spreadsheets.values.batchClear({
+    // ─── WRITE-THEN-TRIM (never leave the cloud empty on a mid-push failure) ───
+    // 1) write all current rows first; 2) only THEN clear any stale rows below the written block.
+    var writtenRows = {};
+    data.forEach(function (d) {
+      var tab = d.range.split('!')[0];
+      writtenRows[tab] = (d.values ? d.values.length : 0);
+    });
+    var toWrite = data.filter(function (d) { return d.values && d.values.length > 0; });
+    return gapi.client.sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: gSpreadsheetId,
-      resource: { ranges: SHEET_TABS.map(function (t) { return t + '!A2:Z'; }) }
+      resource: { valueInputOption: 'RAW', data: toWrite }
     }).then(function () {
-      return gapi.client.sheets.spreadsheets.values.batchUpdate({
+      // clear only the rows AFTER the freshly written block in each tab (handles deletions)
+      var clearRanges = SHEET_TABS.map(function (t) {
+        var start = 2 + (writtenRows[t] || 0);   // first stale row
+        return t + '!A' + start + ':Z';
+      });
+      return gapi.client.sheets.spreadsheets.values.batchClear({
         spreadsheetId: gSpreadsheetId,
-        resource: { valueInputOption: 'RAW', data: data.filter(function (d) { return d.values && d.values.length > 0; }) }
+        resource: { ranges: clearRanges }
       });
     });
   });
+}
+
+// ─── Layer 2 safety helpers: merge cloud + local so a stale/empty cloud can NEVER wipe local ───
+function mergeById(localArr, cloudArr) {
+  var byId = {}, order = [];
+  function add(x) {
+    if (!x || x.id === undefined || x.id === null || x.id === '') return;
+    var k = String(x.id);
+    if (!(k in byId)) order.push(k);
+    byId[k] = x;              // later writer wins
+  }
+  (cloudArr || []).forEach(add);   // cloud first
+  (localArr || []).forEach(add);   // local last → local wins on id conflict (protects your just-made edits)
+  return order.map(function (k) { return byId[k]; });
+}
+function mergeChecks(localObj, cloudObj) {
+  var out = {}, d;
+  for (d in (cloudObj || {})) if (cloudObj.hasOwnProperty(d)) out[d] = (cloudObj[d] || []).slice();
+  for (d in (localObj || {})) if (localObj.hasOwnProperty(d)) {
+    var merged = (out[d] || []).slice(), seen = {};
+    merged.forEach(function (v) { seen[v] = 1; });
+    (localObj[d] || []).forEach(function (v) { if (!seen[v]) { merged.push(v); seen[v] = 1; } });
+    out[d] = merged;
+  }
+  return out;
+}
+function mergeCats(localArr, cloudArr) {
+  var seen = {}, out = [];
+  (cloudArr || []).concat(localArr || []).forEach(function (c) {
+    if (c && !seen[c]) { seen[c] = 1; out.push(c); }
+  });
+  return out;
 }
 
 function loadAllFromSheet() {
@@ -681,18 +726,21 @@ function loadAllFromSheet() {
       if (row[0] === 'alarmVolume') newVol = parseFloat(row[1]) || alarmVolume;
     });
 
-    // Merge: cloud overrides local where there's overlap, but keep local-only that isn't on cloud
-    // (since local was just written, this is normally equivalent to "cloud == local")
-    reminders = newReminders;
-    permits = newPermits;
-    events = newEvents;
-    records = newRecords;
-    checks = newChecks;
-    customCats = newCats;
+    // ─── Layer 2 SAFETY: MERGE cloud with local — never let an empty/stale cloud wipe local ───
+    // Union by id, local wins on conflict. Local-only rows survive; cloud-only rows are pulled in.
+    reminders  = mergeById(reminders, newReminders);
+    permits    = mergeById(permits, newPermits);
+    events     = mergeById(events, newEvents);
+    records    = mergeById(records, newRecords);
+    checks     = mergeChecks(checks, newChecks);
+    customCats = mergeCats(customCats, newCats);
     soundOn = newSoundOn;
     alarmVolume = newVol;
 
-    // also save to local for offline backup
+    // permit ids must stay numeric for local logic
+    permits.forEach(function (p) { var n = parseInt(p.id, 10); if (!isNaN(n)) p.id = n; });
+
+    // save merged set to local. DB.set also queues a push, so the cloud catches up to the union.
     DB.set('ptw_reminders', reminders); DB.set('ptw_permits', permits);
     DB.set('ptw_events', events); DB.set('ptw_records', records);
     DB.set('ptw_checks', checks); DB.set('ptw_customCats', customCats);
